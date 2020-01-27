@@ -5,7 +5,6 @@ library(dplyr)
 library(broom)
 library(stringr)
 
-library(here)
 library(devtools)
 P <- rprojroot::find_rstudio_root_file
 
