@@ -1,0 +1,32 @@
+---
+title: "Resource Mobilization Report"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+We should start thinking about how we should organize the report... I included some headings that might work
+
+Goals for the report:
+  +Create an econometric model to estimate resources needed to meet biodiversity targets
+  +Explain the model in a way that most people can understand
+  +Less than 14 pages, but as much appendix as we need
+  
+##Literature Review ? 
+
+##Methodology
+
+##Model
+
+##Results and Discussion
+
+##Conclusion
+
+#Appendix
+  
+
+  
