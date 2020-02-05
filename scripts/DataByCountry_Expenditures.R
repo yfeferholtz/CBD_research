@@ -56,7 +56,7 @@ reg1<- lm(ln_newdomexp~ lnGDP +
 
 library(sjstats)
 #check robustness
-rob1<- robust(reg1)
+rob1<- parameters::standard_error_robust(reg1)
 
 #output tables for regression 1 and robustness
 out2<-capture.output(stargazer(reg1))
@@ -115,7 +115,7 @@ ggplot(data1)+
 
 ln_extrapolate2 <- ln_extrapolate[is.na(ln_extrapolate) == FALSE]
 #sum of domestic expenditures
-sum_exp1 <- sum(extrapolate_exp)/1e9 
+sum_exp1 <- sum(exp(ln_extrapolate2))/1e9 
 
  
 ## Expenditures based on country type
@@ -131,7 +131,7 @@ reg2 <- lm(ln_newdomexp ~
            na.action=na.exclude,
            data1)
 #check robustness
-rob2<-robust(reg2)
+rob2<-parameters::standard_error_robust(reg2)
 
 #output table
 out4<-capture.output(stargazer(reg2))
@@ -173,7 +173,7 @@ ggplot(data1)+
 
 ln_extrapolate_exp2 <- ln_extrapolate_exp[is.na(ln_extrapolate_exp) == FALSE]
 extrapolate_ex2p <- exp(ln_extrapolate_exp2)
-sum_exp2 <- sum(extrapolate_exp)/1e9 
+sum_exp2 <- sum(extrapolate_ex2p)/1e9 
 
 dataforneeds<-data1 %>% 
   select(constant,
@@ -190,8 +190,21 @@ dataforneeds<-data1 %>%
          oilrentsofgdp,
          lnmanual_extrapdomexp,
          ln_newdomexp,
+         ln_average_co2emmkt,
          extrap_domexp2,
          extrap_dom_exp,
          lnextrapdomexp1,
          lnextrapdomexp2)
 saveRDS(dataforneeds, "outputs/dataforneeds.RDS")
+
+#random country test using Egypt
+testexp<- exp(reg1$coefficients[[1]]*datatest$constant+
+                reg1$coefficients[[2]]*datatest$lnGDP+
+                reg1$coefficients[[3]]*datatest$governmenteffectivenessestimate+
+                reg1$coefficients[[4]]*datatest$average_population_density+
+                reg1$coefficients[[5]]*datatest$agriculturallandoflandarea+
+                reg1$coefficients[[6]]*datatest$average_forestarealandarea+
+                reg1$coefficients[[7]]*datatest$GDP_CO2+
+                reg1$coefficients[[8]]*datatest$CO2_Ems)
+
+
