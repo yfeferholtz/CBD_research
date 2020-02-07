@@ -78,5 +78,66 @@ if (useAustronesia == 1) steward$Regionbasic2<-steward$Region
 # FOR IMMINENT DECLINE ANALYSIS (THE MIDDLE PERIOD), AND FOR CURRENT FUNDING NEEDS ANALYSIS (THE MOST RECENT PERIOD)#
 #####################################################################################################################
 
+# Choice of governance METRIC.
+steward$governance<-steward$corruption9600   # choice of: steward$goveffective9600 steward$corruption9600 steward$regul9600 steward$polstab9600 steward$voice9600 steward$ruleoflaw9600. Testing all six forms of governance
+steward$newgovernance<-steward$corruption9708 # choice as above but with 9708. The 9708 values were originally used to make a prediction of imminent declines, but may be out of date now. However, we only have spending up to 2008, and so we can’t use any period later than this.
+steward$currentgovernance<-steward$corruption0108 # steward$voice0108   steward$polstab0108  steward$goveffective0108   steward$regul0108   steward$ruleoflaw0108   steward$corruption0108    The 0108 values for governance were, at time of creation, the most up to date ones for governance. There will now be newer figures.
+
+# Choice of governance growth metric, as for governance metric.
+steward$governancegrowth<- steward$ruleoflawgrowth9602 # steward$goveffgrowth9602   steward$ruleoflawgrowth9602  steward$corruptiongrowth9602   steward$voicegrowth9602  
+steward$newgovernancegrowth<-steward$ voicegrowth9808  # ruleoflawgrowth9808   voicegrowth9808    corruptiongrowth9808  
+steward$currentgovernancegrowth<-steward$voicegrowth0212 # choices are ruleoflawgrowth0212   voicegrowth0212  corruptiongrowth0212  
+
+steward$poorcurrentfinanceinfo [steward$COUNTRY=="China"]<-0
+# although China’s spending is probably incomplete, let’s have a look at what might be going on in the projections at least
+
+Austronesia <- c(which(steward$COUNTRY=="Indonesia"), which (steward$COUNTRY=="Malaysia"), 
+                 which (steward$COUNTRY=="Papua_New_Guinea"), which(steward$COUNTRY=="Federated_States_of_Micronesia"), 
+                 which (steward$COUNTRY=="East_Timor"), which(steward$COUNTRY=="Philippines"), 
+                 which(steward$COUNTRY=="Fiji"), which(steward$COUNTRY=="Brunei"), 
+                 which(steward$COUNTRY=="Solomon_Islands"), which(steward$COUNTRY=="Tonga"), 
+                 which(steward$COUNTRY=="Tuvalu"), which(steward$COUNTRY=="Singapore"))
+
+steward$Region<-as.character(steward$Regionbasic2)
+steward$Region[Austronesia]<- "Austronesia"
+if (useAustronesia == 1) steward$Regionbasic2<-steward$Region
+
+steward$agpercent<-steward$meanagland9203 # don’t use this if including country area
+
+steward$popD<-steward$meanpop9203/steward$area_country
+# steward$GNP<-steward$gnppppcap9203/steward$NPL2005*steward$meanpop9203
+  ## I don't know why this is commented out
+steward$gdppppcap<-steward$gdpppp9203/steward$meanpop9203
+
+# testing different possible periods for the current spending needs analysis
+steward$popgrowth0112<- steward$popgrowth0112/11
+steward$popgrowth0312<- steward$popgrowth0312/9
+steward$popgrowth9203<- steward$popgrowth9203/11
+steward$popgrowth9708<- steward$popgrowth9708/11
+
+steward$aglandgrowth0112<-steward$aglandaagr0112raw
+steward$aglandgrowth0312<-steward$aglandaagr0312/9
+steward$aglandgrowth9203<-steward$aglandaagr9203raw
+steward$aglandgrowth9708<-steward$aglandaagr9708raw
+
+if (flag9200==1) { 
+  steward$agpercent<-steward$meanagland9200
+  steward$popD<-steward$meanpop9200/steward$area_country
+  steward$gdppppcap<-steward$gdpppp9200/steward$meanpop9200
+  
+}
+steward$allRLC25<-steward$birdRLC25 + steward$mammalRLC25 # if Adjust1994_2000 is set to 0.0, this is what it will pick up. Now belt and braced in if statement.
+
+if (Adjust1994_2000 == 0.33) steward$allRLC25<-steward$birdRLC25no8833pc94 + steward$mammalRLC25
+if (Adjust1994_2000 == 1.0) steward$allRLC25<-steward$birdRLC25no88no94 + steward$mammalRLC25
+if (Adjust1994_2000 == 0.0) steward$allRLC25<-steward$birdRLC25no88all94+ steward$mammalRLC25
+
+steward$allRLC33<-steward$birdRLC33 + steward$mammalRLC33
+if (Adjust1994_2000 == 0.33) steward$allRLC33<-steward$birdRLC33no8833pc94 + steward$mammalRLC33
+if (Adjust1994_2000 == 0.0) steward$allRLC33<-steward$birdRLC33no88all94 + steward$mammalRLC33
+if (Adjust1994_2000 == 1.0) steward$allRLC33<-steward$birdRLC33no88no94 + steward$mammalRLC33
+
+##The next line would be 247 in Anthony's "Gama data setup" code
+
 
 
