@@ -16,15 +16,18 @@ Goals for the report:
   +Explain the model in a way that most people can understand
   +Less than 14 pages, but as much appendix as we need
   
-##Literature Review ? 
+##Resources needed
 
-##Methodology
+### Waldron
 
-##Model
+### Rishman (and us)
 
-##Results and Discussion
+### TNC
 
-##Conclusion
+## Costs and benefits of implementing the new Framework
+
+## Discussion
+
 
 #Appendix
   
