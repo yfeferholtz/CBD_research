@@ -37,11 +37,22 @@ library(stargazer)
 out<-capture.output(stargazer(res))
 saveRDS(out, P('/outputs/cbd_exp_tables/corr_table_1.RDS'))
 
-#add dummies for type of country
-library(fastDummies)
-data1 <- fastDummies::dummy_cols(data1, select_columns = "type")
 
 ## Expenditures based on country distinctions
+# create subset with countries that report dom exp
+library(dplyr)
+datashort<-data1 %>% 
+  filter(is.na(ln_newdomexp)==FALSE) %>% 
+  select(ln_newdomexp, lnGDP,
+           governmenteffectivenessestimate,
+           average_population_density ,
+           agriculturallandoflandarea ,
+           average_forestarealandarea ,
+           GDP_CO2,
+           CO2_Ems,
+         constant,
+         new_domexp,
+         countries)
 
 # regression 1 - based on country characteristics - RISHMAN
 reg1<- lm(ln_newdomexp~ lnGDP +
@@ -51,8 +62,8 @@ reg1<- lm(ln_newdomexp~ lnGDP +
             average_forestarealandarea +
             GDP_CO2+
             CO2_Ems,
-            na.action=na.exclude, data=data1)
-# na.exclude should pad the fitted values and residuals, but it's not?
+          na.action=na.exclude,
+            datashort)
 
 library(sjstats)
 #check robustness
@@ -66,22 +77,40 @@ saveRDS(out3, P('/outputs/cbd_exp_tables/robust_table_1.RDS'))
 summary(reg1)
 
 #extrapolated domestic expenditures from fitted values
-data1$lnextrapdomexp1 <- predict.lm(reg1)
+datashort$extrapdomexp1 <- exp(predict.lm(reg1))
 #total extrapolated domestic expenditures -1 
 sumextrapdomexp1<- sum(exp(reg1$fitted.values))/1E9
 
+
+#find difference between fitted values - put in new data.frame
+datashort$difference = (datashort$new_domexp-datashort$extrapdomexp1)/1E9
+datashort$absdifference = abs(datashort$new_domexp-datashort$extrapdomexp1)/1E9
+
+library(plyr)
+data_expend<- datashort %>% 
+  select(countries, difference, absdifference, new_domexp) %>% 
+  arrange(desc(absdifference)) %>% 
+  mutate(new_domexp=as.factor(new_domexp/1E9))
+
+ggplotly(
+#plot bar graph of top 10 difference countries
+ggplot(head(data_expend, n=10), aes(x=countries, y=difference))+
+  geom_bar(stat='identity')+
+  ylab("difference - in USD billions")+
+  ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures"))
+
+
 #Graph extrapolated expenditures against reported
-
-data1$extrap_dom_exp <- exp(data1$lnextrapdomexp1)
-#how many missing values?
-missing1<-sum(is.na(data1$extrap_dom_exp))
-
-library(ggplot2)
-ggplot(data1)+
-  geom_point(aes(countries, new_domexp, color="Reported"))+
-  geom_point(aes(countries, extrap_dom_exp, color = "Extrapolated"))+
-  xlab("Countries")+
-  ylab("Domestic Expenditures")
+# data1$extrap_dom_exp <- exp(data1$lnextrapdomexp1)
+# #how many missing values?
+# missing1<-sum(is.na(data1$extrap_dom_exp))
+# 
+# library(ggplot2)
+# ggplot(data1)+
+#   geom_point(aes(countries, new_domexp, color="Reported"))+
+#   geom_point(aes(countries, extrap_dom_exp, color = "Extrapolated"))+
+#   xlab("Countries")+
+#   ylab("Domestic Expenditures")
 
 #manual extrapolate 
 
@@ -103,13 +132,14 @@ data1$extrap_dom_exp_manual<-extrapdomexp_manual1
 missing2<-sum(is.na(data1$extrap_dom_exp_manual))
 #manual extrapolation gives a lot more data because it doesn't drop countries missing one characteristic
 
-
+library(plotly)
 #graph with manual extrapolated expenditures
+ggplotly(
 ggplot(data1)+
   geom_point(aes(countries, new_domexp, color="Reported"))+
   geom_point(aes(countries, extrap_dom_exp_manual, color = "Extrapolated"))+
   xlab("Countries")+
-  ylab("Domestic Expenditures")
+  ylab("Domestic Expenditures"))
 
 #more outliers...
 
@@ -117,9 +147,95 @@ ln_extrapolate2 <- ln_extrapolate[is.na(ln_extrapolate) == FALSE]
 #sum of domestic expenditures
 sum_exp1 <- sum(exp(ln_extrapolate2))/1e9 
 
- 
-## Expenditures based on country type
+#test manual extrapolation with subset
 
+# ln_extrapolateshort<-
+#   reg1$coefficients[[1]]*datashort$constant+
+#   reg1$coefficients[[2]]*datashort$lnGDP+
+#   reg1$coefficients[[3]]*datashort$governmenteffectivenessestimate+
+#   reg1$coefficients[[4]]*datashort$average_population_density+
+#   reg1$coefficients[[5]]*datashort$agriculturallandoflandarea+
+#   reg1$coefficients[[6]]*datashort$average_forestarealandarea+
+#   reg1$coefficients[[7]]*datashort$GDP_CO2+
+#   reg1$coefficients[[8]]*datashort$CO2_Ems
+# 
+# ln_extrapolateshort_nona<- ln_extrapolateshort[is.na(ln_extrapolateshort)==FALSE]
+# sumshort <- sum(exp(ln_extrapolateshort_nona))/1E9
+
+
+
+
+
+
+#Run the model with OECD 
+
+#create subset
+data2 <- data1 %>% 
+  filter(new_domexp>0) %>% 
+  select(countries,
+         OECD,
+         type,
+         expected_funding_gap,
+         agriculturallandoflandarea,
+         birdspeciesthreatened,
+         mammalspeciesthreatened,
+         Threatened_Species,
+         oilrentsofgdp,
+         urbanpopulationgrowthannual,
+         populationgrowthannual,
+         CO2_Ems,
+         GDP_CO2,
+         lnGDP,
+         constant,
+         new_domexp,
+         ln_newdomexp,
+         average_agriculture_land,
+         average_forestarealandarea,
+         governmenteffectivenessestimate, average_population_density
+         )
+#add dummies for type of country
+library(fastDummies)
+data2 <- fastDummies::dummy_cols(data2, select_columns = "type")
+#run the model
+
+model1<-lm(ln_newdomexp ~ lnGDP+
+             governmenteffectivenessestimate+
+             average_population_density +
+             agriculturallandoflandarea +
+             average_forestarealandarea +
+             GDP_CO2+
+             CO2_Ems+
+             OECD,
+           na.action=na.exclude,
+           data2)
+#summarize the model
+summary(model1)
+#predicted expenditures
+data2$extrapdomexp <- exp(predict.lm(reg1))
+#predicted total sum of expneidtures for countries that have reported
+model1sum <- sum(data2$extrapdomexp[is.na(data2$extrapdomexp)==FALSE])/1E9
+
+#find difference between fitted values - put in new data.frame
+data2$difference = (data2$new_domexp-data2$extrapdomexp)/1E9
+data2$absdifference = abs(data2$new_domexp-data2$extrapdomexp)/1E9
+
+data2<-arrange(data2, desc(absdifference)) 
+ggplotly(
+  #plot bar graph of top 10 difference countries
+ggplot(head(data2, n=10), aes(x=countries, y=difference))+
+  geom_bar(stat='identity')+
+  ylab("difference - in USD billions")+
+  ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures (OECD)"))
+
+
+
+
+
+
+#add dummies for type of country
+data1 <- fastDummies::dummy_cols(data1, select_columns = "type")
+
+## Expenditures based on country type
 reg2 <- lm(ln_newdomexp ~ 
              lnGDP + 
              agriculturallandoflandarea +
@@ -197,14 +313,6 @@ dataforneeds<-data1 %>%
          lnextrapdomexp2)
 saveRDS(dataforneeds, "outputs/dataforneeds.RDS")
 
-#random country test using Egypt
-testexp<- exp(reg1$coefficients[[1]]*datatest$constant+
-                reg1$coefficients[[2]]*datatest$lnGDP+
-                reg1$coefficients[[3]]*datatest$governmenteffectivenessestimate+
-                reg1$coefficients[[4]]*datatest$average_population_density+
-                reg1$coefficients[[5]]*datatest$agriculturallandoflandarea+
-                reg1$coefficients[[6]]*datatest$average_forestarealandarea+
-                reg1$coefficients[[7]]*datatest$GDP_CO2+
-                reg1$coefficients[[8]]*datatest$CO2_Ems)
+
 
 
