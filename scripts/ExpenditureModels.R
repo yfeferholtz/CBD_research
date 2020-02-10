@@ -58,7 +58,7 @@ library(plotly)
     ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures")
   
   #drop top 5 largest culprits. 
-  N<-5
+  N<-2
   altered_data<- reported_data %>% 
     arrange(desc(absdifference1)) %>% 
   tail(-N)
@@ -144,14 +144,14 @@ library(plotly)
 #using full dataset to extract expenditures for countries that have not reported - using reg3 without the large outliers
   
   ln_extrapolate<-
-    reg3$coefficients[[1]]*cbd_data$constant+
-    reg3$coefficients[[2]]*cbd_data$lnGDP+
-    reg3$coefficients[[3]]*cbd_data$governmenteffectivenessestimate+
-    reg3$coefficients[[4]]*cbd_data$average_population_density+
-    reg3$coefficients[[5]]*cbd_data$agriculturallandoflandarea+
-    reg3$coefficients[[6]]*cbd_data$average_forestarealandarea+
-    reg3$coefficients[[7]]*cbd_data$GDP_CO2+
-    reg3$coefficients[[8]]*cbd_data$CO2_Ems
+    reg2$coefficients[[1]]*cbd_data$constant+
+    reg2$coefficients[[2]]*cbd_data$lnGDP+
+    reg2$coefficients[[3]]*cbd_data$governmenteffectivenessestimate+
+    reg2$coefficients[[4]]*cbd_data$average_population_density+
+    reg2$coefficients[[5]]*cbd_data$agriculturallandoflandarea+
+    reg2$coefficients[[6]]*cbd_data$average_forestarealandarea+
+    reg2$coefficients[[7]]*cbd_data$GDP_CO2+
+    reg2$coefficients[[8]]*cbd_data$CO2_Ems
 
 #find total predicted expenditures for all countries with these characteristics reported.  
   ln_extrapolate2 <- ln_extrapolate[is.na(ln_extrapolate) == FALSE]
