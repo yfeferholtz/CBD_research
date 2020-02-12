@@ -17,12 +17,13 @@ data1 <- data_by_country %>%
   mutate(new_needs = needs*1000) %>%
   mutate(ln_newneeds = log(new_needs))
 #check dataframe
-head(data1,6)
+#head(data1,6)
 
 #add constant to data1
 constant <- rep(1, 212)
 data1<-cbind(data1,constant)
 
+saveRDS(data1, "outputs/dataforexpenditure.RDS")
 #create df to test correlation
 data2<-data1 %>% 
   select(lndomexp_thousand, lnGDP, governmenteffectivenessestimate, average_population_density, agriculturallandoflandarea, average_forestarealandarea, GDP_CO2, CO2_Ems, Threatened_Species, populationgrowthannual, Gov,  oilrentsofgdp,ln_average_co2emmkt)
