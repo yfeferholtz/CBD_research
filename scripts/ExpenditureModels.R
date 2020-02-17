@@ -20,11 +20,15 @@ reported_data<-cbd_data %>%
          CO2_Ems,
          constant,
          new_domexp,
+         ln_newdomexp_last,
+         ln_newdomexp_max,
+         new_domexp_last,
+         new_domexp_max,
          countries)
 
 # regression 1 - based on country characteristics - original RISHMAN
 
-reg1<- lm(ln_newdomexp~ lnGDP +
+reg1<- lm(ln_newdomexp_last~ lnGDP +
             governmenteffectivenessestimate+
             average_population_density +
             agriculturallandoflandarea +
