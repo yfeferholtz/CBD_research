@@ -59,7 +59,9 @@ library(plotly)
   ggplot(head(data_expend, n=10), aes(x=reorder(countries, difference1), y=difference1))+
     geom_bar(stat='identity')+
     ylab("difference - in USD billions")+
-    ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures")
+    ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures")+
+    theme_classic()+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
   #drop top 5 largest culprits. 
   N<-2
@@ -101,7 +103,9 @@ library(plotly)
   ggplot(head(data_expend, n=10), aes(x=reorder(countries, difference2), y=difference2))+
     geom_bar(stat='identity')+
     ylab("difference - in USD billions")+
-    ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures")
+    ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures")+
+    theme_classic()+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
   #drop China culprit. 
   N<-1
@@ -142,7 +146,9 @@ library(plotly)
   ggplot(head(data_expend, n=10), aes(x=reorder(countries, difference3), y=difference3))+
     geom_bar(stat='identity')+
     ylab("difference - in USD billions")+
-    ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures")
+    ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures")+
+    theme_classic()+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
  
 #using full dataset to extract expenditures for countries that have not reported - using reg3 without the large outliers
