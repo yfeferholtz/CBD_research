@@ -14,6 +14,10 @@ require(dplyr)
 data1 <- data_by_country %>%
   mutate(new_domexp = dom_exp*1000) %>%
   mutate(ln_newdomexp = log(new_domexp)) %>%
+  mutate(new_domexp_max = MaxDomExp*1000) %>%
+  mutate(ln_newdomexp_max = log(new_domexp_max)) %>%
+  mutate(new_domexp_last = LastDomExp*1000) %>%
+  mutate(ln_newdomexp_last = log(new_domexp_last)) %>%
   mutate(new_needs = needs*1000) %>%
   mutate(ln_newneeds = log(new_needs))
 #check dataframe
