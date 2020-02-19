@@ -51,13 +51,16 @@ data_expend<- reported_data %>%
   mutate(new_domexp=as.factor(new_domexp/1E9))
 library(plotly)
 
+
   #plot bar graph of top 10 difference countries
-  ggplot(head(data_expend, n=10), aes(x=reorder(countries, difference1), y=difference1))+
-    geom_bar(stat='identity')+
-    ylab("difference - in USD billions")+
-    ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures")+
-    theme_classic()+
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  pos <- head(data_expend$difference1>=0, n=10) #makes the graph colored based on sign
+  ggplot(head(data_expend, n=10), aes(x=reorder(countries, difference1), y=difference1, fill=pos))+
+      geom_bar(stat='identity')+
+      ylab("difference - in USD billions")+
+      ggtitle("Top 10 largest difference between reported and extrapolated domestic expeditures")+
+      theme_minimal()+
+      theme(legend.position = "none", axis.title.x=element_blank())+
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
   #drop top 5 largest culprits. 
   N<-2
