@@ -54,3 +54,7 @@ model1BIC <- BIC(modelAnthony)
 
 library(car)
 model1VIF<-vif(modelAnthony) #the VIF for lnGDP and GDP_sq are VERYYY high. Problematic
+
+#Robust standard errors
+library(sjstats)
+rob1<-parameters::standard_error_robust(modelAnthony)
