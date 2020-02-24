@@ -66,7 +66,7 @@ library(plotly)
       theme(legend.position = "none", axis.title.x=element_blank())+
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
-  #drop top 5 largest culprits. 
+  #drop top 52largest culprits. 
   N<-2
   altered_data<- reported_data %>% 
     arrange(desc(absdifference1)) %>% 
