@@ -19,6 +19,14 @@ FinNeeds <- read_xls("data/financial_needs_data3.xls")
 #summary stats for reported needs
 FinNeeds<-FinNeeds[order(FinNeeds$type, FinNeeds$countries),]
 
+#data in thousands
+require(dplyr)
+FinNeeds <- FinNeeds %>%
+  mutate(new_domexp = dom_exp*1000) %>%
+  mutate(ln_newdomexp = log(new_domexp)) %>%
+  mutate(new_needs = needs*1000) %>%
+  mutate(ln_newneeds = log(new_needs))
+
 #add constant to data1
 constant <- rep(1, 212)
 FinNeeds<-cbind(FinNeeds,constant)
@@ -39,7 +47,7 @@ cortbl <- cor(dataforCor, use = "complete.obs")
 
 # ** Table 4 ***
 ## regression based on Anthony's data
-modelAnthony <- lm(lndomexp_thousand ~ birdspeciesthreatened +
+modelAnthony <- lm(ln_newdomexp ~ birdspeciesthreatened +
                    mammalspeciesthreatened +
                    ln_landarea +
                    governmenteffectivenessestimate +
@@ -67,7 +75,7 @@ rob1<-parameters::standard_error_robust(modelAnthony) #only difference between R
 
 #run with robust SE
 library(MASS)
-modelAnthony2rob <- rlm(lndomexp_thousand ~ birdspeciesthreatened +
+modelAnthony2rob <- rlm(ln_newdomexp ~ birdspeciesthreatened +
                       mammalspeciesthreatened +
                       ln_landarea +
                       governmenteffectivenessestimate +
@@ -85,7 +93,7 @@ sum(model2VIF)
 
 #Anthony model 3 - less variables 
 #Robust
-modelAnthony3rob<- rlm(lndomexp_thousand~ birdspeciesthreatened+
+modelAnthony3rob<- rlm(ln_newdomexp~ birdspeciesthreatened+
                      mammalspeciesthreatened +
                      ln_landarea+ Price_Index_yr2011 +
                      terrestrialandmarineprotectedare +
@@ -93,7 +101,7 @@ modelAnthony3rob<- rlm(lndomexp_thousand~ birdspeciesthreatened+
                      GDP_sq +
                      Gov, na.action = na.exclude, data = FinNeeds)
 #Model fit
-modelAnthony3 <- lm(lndomexp_thousand~ birdspeciesthreatened+
+modelAnthony3 <- lm(ln_newdomexp~ birdspeciesthreatened+
                       mammalspeciesthreatened +
                       ln_landarea+ Price_Index_yr2011 +
                       terrestrialandmarineprotectedare +
@@ -110,7 +118,7 @@ model3VIF<- vif(modelAnthony3rob) #GDP variables not AS high, but still nearly 5
 sum(model3VIF)
 
 #Anthony model 4- minus GDP_sq 
-modelAnthony4rob<- rlm(lndomexp_thousand ~ birdspeciesthreatened +
+modelAnthony4rob<- rlm(ln_newdomexp ~ birdspeciesthreatened +
                      mammalspeciesthreatened+
                      ln_landarea +
                      Price_Index_yr2011 +
@@ -118,7 +126,7 @@ modelAnthony4rob<- rlm(lndomexp_thousand ~ birdspeciesthreatened +
                      lnGDP +
                      Gov, na.action = na.exclude, FinNeeds)
 #fit
-modelAnthony4<-lm(lndomexp_thousand ~ birdspeciesthreatened +
+modelAnthony4<-lm(ln_newdomexp ~ birdspeciesthreatened +
                     mammalspeciesthreatened+
                     ln_landarea +
                     Price_Index_yr2011 +
@@ -135,7 +143,7 @@ sum(model4VIF)
 
 #Anthony model 5 (GDP_sq instead of ln_GDP) 
 #robust
-modelAnthony5rob <- rlm(lndomexp_thousand ~ birdspeciesthreatened +
+modelAnthony5rob <- rlm(ln_newdomexp ~ birdspeciesthreatened +
                       mammalspeciesthreatened +
                       ln_landarea +
                       Price_Index_yr2011+
@@ -143,7 +151,7 @@ modelAnthony5rob <- rlm(lndomexp_thousand ~ birdspeciesthreatened +
                       GDP_sq +
                       Gov, na.action = na.exclude, FinNeeds)
 #fit
-modelAnthony5 <- lm(lndomexp_thousand ~ birdspeciesthreatened +
+modelAnthony5 <- lm(ln_newdomexp ~ birdspeciesthreatened +
                       mammalspeciesthreatened +
                       ln_landarea +
                       Price_Index_yr2011+
@@ -159,14 +167,14 @@ model5VIF<- vif(modelAnthony5rob) #VIF MUCH better, highest (4.37 price index)
 sum(model5VIF)
 
 #Anthony model 6, no gov 
-modelAnthony6rob <- rlm(lndomexp_thousand~ birdspeciesthreatened +
+modelAnthony6rob <- rlm(ln_newdomexp ~ birdspeciesthreatened +
                       mammalspeciesthreatened +
                       ln_landarea +
                       Price_Index_yr2011+
                       terrestrialandmarineprotectedare +
                       GDP_sq, na.action = na.exclude, FinNeeds)
 #fit
-modelAnthony6 <- lm(lndomexp_thousand~ birdspeciesthreatened +
+modelAnthony6 <- lm(ln_newdomexp ~ birdspeciesthreatened +
                           mammalspeciesthreatened +
                           ln_landarea +
                           Price_Index_yr2011+
@@ -185,11 +193,11 @@ sum(model6VIF)
 
 ln_yhatAnthony <- predict.lm(modelAnthony5rob)
 FinNeeds$yhatAnthony<-exp(ln_yhatAnthony)/1E9
-extrapExpAnth<- sum(exp(yhatAnthony[is.na(yhatAnthony)==FALSE]))/1E9 #43.4 bill
+extrapExpAnth<- sum(exp(FinNeeds$yhatAnthony[is.na(FinNeeds$yhatAnthony)==FALSE]))/1E9 #43.4 bill
 
 #manual extrapolation
 
-ln_anthony <-
+FinNeeds$ln_anthony <-
   modelAnthony5rob$coefficients[[1]]*FinNeeds$constant+
   modelAnthony5rob$coefficients[[2]]*FinNeeds$birdspeciesthreatened+
   modelAnthony5rob$coefficients[[3]]*FinNeeds$mammalspeciesthreatened+
@@ -199,29 +207,262 @@ ln_anthony <-
   modelAnthony5rob$coefficients[[7]]*FinNeeds$GDP_sq+
   modelAnthony5rob$coefficients[[8]]*FinNeeds$Gov
 
-FinNeeds$anthonyMan <- exp(ln_anthony)
-extraExpAnthMan<- sum(exp(ln_anthony[is.na(ln_anthony)==FALSE]))/1E9 #103.07 bill
+FinNeeds$anthonyMan <- exp(FinNeeds$ln_anthony)
 
-#Table 5 - extrapolated needs
-modelNeedsAnth <- lm(ln_newneeds ~ yhatAnthony, na.action = na.exclude, FinNeeds)
-summary(modelNeedsAnth)
-modelNeedsAnthMod <- lm(ln_newneeds ~ anthonyMan, na.action = na.exclude, FinNeeds)
-summary(modelNeedsAnthMod)
-
-#find the largest outliers
-FinNeeds$difference = FinNeeds$dom_exp-FinNeeds$anthonyMan
-FinNeeds$absdiff = abs(FinNeeds$difference)
-
+FinNeeds$absdiff <- abs(FinNeeds$new_domexp-FinNeeds$anthonyMan)
 #take off top two outliers
 library(plyr)
 N<-2
 altered_data<- FinNeeds %>% 
   arrange(desc(absdiff)) %>% 
   tail(-N)
-#plot
+#now run the model again and manually extrapolate again
+modelAnthony5rob <- rlm(ln_newdomexp ~ birdspeciesthreatened +
+                          mammalspeciesthreatened +
+                          ln_landarea +
+                          Price_Index_yr2011+
+                          terrestrialandmarineprotectedare +
+                          GDP_sq +
+                          Gov, na.action = na.exclude, altered_data)
+
+FinNeeds$ln_anthony <-
+  modelAnthony5rob$coefficients[[1]]*FinNeeds$constant+
+  modelAnthony5rob$coefficients[[2]]*FinNeeds$birdspeciesthreatened+
+  modelAnthony5rob$coefficients[[3]]*FinNeeds$mammalspeciesthreatened+
+  modelAnthony5rob$coefficients[[4]]*FinNeeds$ln_landarea+
+  modelAnthony5rob$coefficients[[5]]*FinNeeds$Price_Index_yr2011+
+  modelAnthony5rob$coefficients[[6]]*FinNeeds$terrestrialandmarineprotectedare+
+  modelAnthony5rob$coefficients[[7]]*FinNeeds$GDP_sq+
+  modelAnthony5rob$coefficients[[8]]*FinNeeds$Gov
+
+FinNeeds$anthonyMan <- exp(FinNeeds$ln_anthony)
+extraExpAnthMan<- sum(exp(FinNeeds$ln_anthony[is.na(FinNeeds$ln_anthony)==FALSE]))/1E9 #100.79 bill
+
+
+
+#Table 5 - extrapolated needs
+modelNeedsAnth <- lm(ln_newneeds ~ ln_yhatAnthony, na.action = na.exclude, FinNeeds)
+summary(modelNeedsAnth)
+modelNeedsAnthMod <- lm(ln_newneeds ~ ln_anthony, na.action = na.exclude, FinNeeds)
+summary(modelNeedsAnthMod)
+
+
+#plot Figure 1
 library(ggplot2)
-library(plotly)
-ggplotly(
-ggplot(FinNeeds)+
-  geom_point(aes(dom_exp, anthonyMan)))
+
+ggplot(altered_data,aes(x=ln_newdomexp,y= ln_anthony))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE)+
+  theme_classic()#can't figure out why this is formatting improperly
+
+# Table 6 - 
+
+#fill in extrapolated dom exp where there isn't reported data
+FinNeeds<-FinNeeds %>% 
+  mutate(ln_ManualExtrap = ifelse(is.na(ln_newdomexp)==TRUE, FinNeeds$ln_anthony, FinNeeds$ln_newdomexp)) %>% 
+  mutate(ManualExtrap = exp(ln_ManualExtrap))
+#needs model
+modelNeeds2 <- rlm(ln_newneeds ~ ln_ManualExtrap, FinNeeds)
+
+#determine needs
+ln_needs <-
+  modelNeeds2$coefficients[[1]]*FinNeeds$constant+
+  modelNeeds2$coefficients[[2]]*FinNeeds$ln_ManualExtrap
+sumneeds1 <- sum(exp(ln_needs[is.na(ln_needs)==FALSE]))/1E9 #155.07 billion
+
+# table 7
+#generate expenditure error
+error <- FinNeeds$ln_newdomexp-FinNeeds$ln_anthony
+
+#Table 8 - cor table from above. 
+
+#Table 9 - ALl of my assessments show lower R^2 values than Rishman found
+
+ modelRishmanrob <-rlm(lndomexp_thousand~ birdspeciesthreatened +
+                      ln_landarea +
+                      Gov+
+                      average_population_density+
+                      agriculturallandoflandarea+
+                      GDP_sq +
+                      CO2_Ems +
+                      lnGDP +
+                      GDP_CO2, na.action = na.exclude, FinNeeds)
+ summary(modelRishmanrob)
+ #fit test
+ modelRishman<-lm(lndomexp_thousand~ birdspeciesthreatened +
+                     ln_landarea +
+                     Gov+
+                     average_population_density+
+                     agriculturallandoflandarea+
+                     GDP_sq +
+                     CO2_Ems +
+                     lnGDP +
+                     GDP_CO2, na.action = na.exclude, FinNeeds)
+summary(modelRishman) #r2 = .682, significant - intercept, bird species, land area, gov, ag land, gdp, ln gdp
+
+modelRAIC<-AIC(modelRishmanrob, k = 2)
+modelRBIC <- BIC(modelRishmanrob)
+modelRVIF<- vif(modelRishmanrob) #VMajor collinearity between gdp sq, co2, lnGDP and GDP_C02
+
+#model 2 - less gdp c02 and ln gdp
+modelR2rob <- rlm(lndomexp_thousand ~birdspeciesthreatened +
+                    ln_landarea +
+                    Gov +
+                    average_population_density +
+                    agriculturallandoflandarea +
+                    GDP_sq +
+                    CO2_Ems, na.action = na.exclude, FinNeeds)
+#fit
+modelR2 <- lm(lndomexp_thousand ~birdspeciesthreatened +
+                ln_landarea +
+                Gov +
+                average_population_density +
+                agriculturallandoflandarea +
+                GDP_sq +
+                CO2_Ems, na.action = na.exclude, FinNeeds)
+summary(modelR2) #R2 .675 Significant - Intercept, bird species, land area, gov, ag land
+
+modelR2AIC<-AIC(modelR2rob, k = 2)
+modelR2BIC <- BIC(modelR2rob)
+modelR2VIF<- vif(modelR2rob) #Highest VIF 5.2 ln_landarea
+
+#model 3 - 
+modelR3rob <- rlm(lndomexp_thousand ~birdspeciesthreatened+
+                    ln_landarea +
+                    Gov+
+                    populationgrowthannual+
+                    agriculturallandoflandarea +
+                    GDP_sq +
+                    ln_average_co2emmkt, na.action = na.exclude, FinNeeds)
+modelR3 <- lm(lndomexp_thousand ~birdspeciesthreatened+
+                ln_landarea +
+                Gov+
+                populationgrowthannual+
+                agriculturallandoflandarea +
+                GDP_sq +
+                ln_average_co2emmkt, na.action = na.exclude, FinNeeds)
+summary(modelR3) #r2 .6801 significant - Intercept, birds, landarea, gov, ag land
+
+modelR3AIC<-AIC(modelR3rob, k = 2)
+modelR3BIC <- BIC(modelR3rob)
+modelR3VIF<- vif(modelR3rob) #Highest VIF 15 GDP sq, ln avg co2 14. 
+
+#model 4 - 
+modelR4rob <- rlm(lndomexp_thousand~ birdspeciesthreatened +
+                   ln_landarea + 
+                   Gov +
+                   populationgrowthannual+
+                   agriculturallandoflandarea +
+                   GDP_sq+
+                   ln_average_co2emmkt +
+                   Price_Index_yr2011, na.action =na.exclude, FinNeeds )
+#fit
+
+modelR4 <- lm(lndomexp_thousand~ birdspeciesthreatened +
+                ln_landarea + 
+                Gov +
+                populationgrowthannual+
+                agriculturallandoflandarea +
+                GDP_sq+
+                ln_average_co2emmkt +
+                Price_Index_yr2011, na.action =na.exclude, FinNeeds )
+summary(modelR4) #r2 .681 significant Intercept, land area, Gov
+
+modelR4AIC<-AIC(modelR4rob, k = 2)
+modelR4BIC <- BIC(modelR4rob)
+modelR4VIF<- vif(modelR4rob) #VIF 24 - GDP sq 18 ln avg co2. could be problematic
+
+#use model 2 to extrapolate expenditures. 
+
+yhatRishman <- predict.lm(modelR2rob)
+FinNeeds$rishmanexp <- exp(yhatRishman)
+sumExtrapRishman <- sum(rishmanexp[is.na(rishmanexp) == FALSE])/1E9 #37.8 billion
+
+#manual extrapolation
+
+FinNeeds$ln_rishman <-
+  modelR2rob$coefficients[[1]]*FinNeeds$constant+
+  modelR2rob$coefficients[[2]]*FinNeeds$birdspeciesthreatened+
+  modelR2rob$coefficients[[3]]*FinNeeds$ln_landarea+
+  modelR2rob$coefficients[[4]]*FinNeeds$Gov+
+  modelR2rob$coefficients[[5]]*FinNeeds$average_population_density+
+  modelR2rob$coefficients[[6]]*FinNeeds$agriculturallandoflandarea+
+  modelR2rob$coefficients[[7]]*FinNeeds$GDP_sq+
+  modelR2rob$coefficients[[8]]*FinNeeds$CO2_Ems
+
+manualRishman <- exp(FinNeeds$ln_rishman)  
+summanualrish <- sum(manualRishman[is.na(manualRishman)==FALSE])/1E9 #135.93 billion
+
+#plot it
+this <- data.frame(1:71) %>% 
+  mutate(fittedvalues = modelR2rob$fitted.values) %>% 
+  mutate(residuals = modelR2rob$residuals)
+ggplot(this, aes(fittedvalues, residuals))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE)
+
+# Drop the outliers
+
+
+FinNeeds$RishAbsDiff <- abs(FinNeeds$new_domexp - FinNeeds$rishmanexp)
+#drop top two outliers
+N<-2
+altered_dataR<- FinNeeds %>%
+  arrange(desc(RishAbsDiff)) %>%
+  tail(-N)
+
+#rerun model
+
+modelR2rob2 <- rlm(lndomexp_thousand ~birdspeciesthreatened +
+                     ln_landarea +
+                     Gov +
+                     average_population_density +
+                     agriculturallandoflandarea +
+                     GDP_sq +
+                     CO2_Ems, na.action = na.exclude, altered_dataR)
+modelR22 <- lm(lndomexp_thousand ~birdspeciesthreatened +
+                 ln_landarea +
+                 Gov +
+                 average_population_density +
+                 agriculturallandoflandarea +
+                 GDP_sq +
+                 CO2_Ems, na.action = na.exclude, altered_dataR)
+summary(modelR22) #r2 .6595 - not as good of fit
+#manually extract
+FinNeeds$ln_rishman2 <-
+  modelR2rob2$coefficients[[1]]*FinNeeds$constant+
+  modelR2rob2$coefficients[[2]]*FinNeeds$birdspeciesthreatened+
+  modelR2rob2$coefficients[[3]]*FinNeeds$ln_landarea+
+  modelR2rob2$coefficients[[4]]*FinNeeds$Gov+
+  modelR2rob2$coefficients[[5]]*FinNeeds$average_population_density+
+  modelR2rob2$coefficients[[6]]*FinNeeds$agriculturallandoflandarea+
+  modelR2rob2$coefficients[[7]]*FinNeeds$GDP_sq+
+  modelR2rob2$coefficients[[8]]*FinNeeds$CO2_Ems
+ExtrapExp <- exp(FinNeeds$ln_rishman2)
+summodel2<- sum(ExtrapExp[is.na(ExtrapExp)==FALSE])/1E9 #109.73 billion
+
+#error
+errorRish <- FinNeeds$newneeds - ExtrapExp
+
+
+#Table 10
+modelNeedsRish <- lm(ln_newneeds ~ ln_rishman + 
+                       mammalspeciesthreatened + 
+                       oilrentsofgdp +
+                       terrestrialprotectedareasoftotal, na.action = na.exclude, FinNeeds)
+summary(modelNeedsRish) #R2 .403
+
+#manually extract needs
+ln_needsRish <- 
+  modelNeedsRish$coefficients[[1]]*FinNeeds$constant+
+  modelNeedsRish$coefficients[[2]]*FinNeeds$ln_rishman+
+  modelNeedsRish$coefficients[[3]]*FinNeeds$mammalspeciesthreatened+
+  modelNeedsRish$coefficients[[4]]*FinNeeds$oilrentsofgdp+
+  modelNeedsRish$coefficients[[5]]*FinNeeds$terrestrialprotectedareasoftotal
+
+sumneedsRish<- sum(exp(ln_needsRish[is.na(ln_needsRish)==FALSE]))/1E9 #153.06 billion (180 countries)
+
+
+
+
 
