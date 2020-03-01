@@ -172,5 +172,7 @@ library(plotly)
   sum_exp2 <- sum(exp(ln_extrapolate2))/1e9 
 #  this total sum is still less than just the sum of reporting countries from reg1
 
+  
+  
     
   

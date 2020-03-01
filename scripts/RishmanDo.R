@@ -31,6 +31,7 @@ FinNeeds <- FinNeeds %>%
 constant <- rep(1, 212)
 FinNeeds<-cbind(FinNeeds,constant)
 
+
 library(dplyr)
 FinNeedsSum<-FinNeeds %>% 
   summarise_at("newneeds", list(mean, min, max), na.rm = TRUE) 
@@ -376,7 +377,7 @@ modelR4VIF<- vif(modelR4rob) #VIF 24 - GDP sq 18 ln avg co2. could be problemati
 
 yhatRishman <- predict.lm(modelR2rob)
 FinNeeds$rishmanexp <- exp(yhatRishman)
-sumExtrapRishman <- sum(rishmanexp[is.na(rishmanexp) == FALSE])/1E9 #37.8 billion
+sumExtrapRishman <- sum(FinNeeds$rishmanexp[is.na(FinNeeds$rishmanexp) == FALSE])/1E9 #37.8 billion
 
 #manual extrapolation
 
@@ -463,6 +464,67 @@ ln_needsRish <-
 sumneedsRish<- sum(exp(ln_needsRish[is.na(ln_needsRish)==FALSE]))/1E9 #153.06 billion (180 countries)
 
 
+#Based on Rishman's Analysis, we will use Anthony's model 5 and Rishman model 2.
+#save the model with top two outliers removed
+saveRDS(modelR22, "outputs/RishmanModel2.RDS")
+saveRDS(modelAnthony5rob, "outputs/WaldronModel5.RDS")
 
+#Try to find a model where ag, GDP and CO2 are significant
+#make logs of co2 and ag
+FinNeeds <- FinNeeds %>% 
+  mutate(ln_agland = log(agriculturallandoflandarea)) %>% 
+  mutate(ln_CO2ems = log(CO2_Ems)) %>% 
+  mutate(ln_popdnsty = log(average_population_density)) %>% 
+  mutate(ln_GDP2010 = log(gdpconstant2010us))
 
+EmModel <- lm(ln_newdomexp ~ lnGDP + 
+                 Gov + 
+                 ln_CO2ems + 
+                 ln_agland + 
+                 birdspeciesthreatened+
+                 ln_popdnsty,
+              FinNeeds, na.action = na.exclude)
 
+summary(EmModel)
+#model tests
+modelEmAIC<-AIC(EmModel, k = 2)
+modelEmBIC <- BIC(EmModel)
+modelEmVIF<- vif(EmModel) #no autocorrelation
+
+ln_emexp <-
+  EmModel$coefficients[[1]]*FinNeeds$constant+
+  EmModel$coefficients[[2]]*FinNeeds$ln_CO2ems+
+  EmModel$coefficients[[3]]*FinNeeds$ln_agland+
+  EmModel$coefficients[[4]]*FinNeeds$birdspeciesthreatened+
+  EmModel$coefficients[[5]]*FinNeeds$ln_popdnsty
+EmExp <- exp(ln_emexp)
+
+# Drop the outliers
+
+FinNeeds$EmAbsDiff <- abs(FinNeeds$new_domexp - EmExp)
+#drop top two outliers
+N<-2
+altered_dataE<- FinNeeds %>%
+  arrange(desc(EmAbsDiff)) %>%
+  tail(-N)
+
+EmModel2 <- lm(ln_newdomexp ~ lnGDP + 
+                Gov + 
+                ln_CO2ems + 
+                ln_agland + 
+                birdspeciesthreatened+
+                ln_popdnsty,
+              altered_dataE, na.action = na.exclude)
+
+summary(EmModel2)
+
+ln_emexp2 <-
+  EmModel2$coefficients[[1]]*FinNeeds$constant+
+  EmModel2$coefficients[[2]]*FinNeeds$ln_CO2ems+
+  EmModel2$coefficients[[3]]*FinNeeds$ln_agland+
+  EmModel2$coefficients[[4]]*FinNeeds$birdspeciesthreatened+
+  EmModel2$coefficients[[5]]*FinNeeds$ln_popdnsty
+EmExpSum <- sum(exp(ln_emexp2[is.na(ln_emexp2)==FALSE])) #111.124
+#save this model, too
+saveRDS(EmModel2, "outputs/EmilyModel.RDS")
+saveRDS(FinNeeds, "outputs/FinancialNeedsDataFromRishman.RDS")
