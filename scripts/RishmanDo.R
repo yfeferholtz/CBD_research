@@ -477,12 +477,13 @@ FinNeeds <- FinNeeds %>%
   mutate(ln_popdnsty = log(average_population_density)) %>% 
   mutate(ln_GDP2010 = log(gdpconstant2010us))
 
-EmModel <- lm(ln_newdomexp ~ lnGDP + 
+EmModel <- lm(ln_newdomexp ~ GDP_sq + 
                  Gov + 
                  ln_CO2ems + 
                  ln_agland + 
                  birdspeciesthreatened+
-                 ln_popdnsty,
+                 ln_popdnsty+
+                ln_landarea,
               FinNeeds, na.action = na.exclude)
 
 summary(EmModel)
@@ -526,5 +527,80 @@ ln_emexp2 <-
   EmModel2$coefficients[[5]]*FinNeeds$ln_popdnsty
 EmExpSum <- sum(exp(ln_emexp2[is.na(ln_emexp2)==FALSE])) #111.124
 #save this model, too
+saveRDS(EmModel2, "outputs/EmilyModel.RDS")
+
+
+
+#try with change in co2 levels instead
+library(WDI)
+co2.reduction.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2006, end = 2014, extra = TRUE) %>%
+  select(iso3c, EN.ATM.CO2E.KT, year) %>% 
+  mutate(countrycode = as.character(iso3c)) %>% 
+  rename('co2emissions' = EN.ATM.CO2E.KT) %>% 
+  group_by(countrycode) %>% 
+  arrange(year, .by_group = TRUE) %>% 
+  mutate(lag = lag(co2emissions)) %>% 
+  mutate(pct_change = (co2emissions - lag(co2emissions))/lag(co2emissions)*100) %>% 
+  summarise(AvgCO2ReductionPercent = -mean(pct_change, na.rm = TRUE))
+#add to FinNeeds
+
+FinNeeds <- left_join(FinNeeds, co2.reduction.rate, by = "countrycode") 
+FinNeeds$ln_CO2reduct <- log(FinNeeds$AvgCO2ReductionPercent)
+
+#now run model with c02 reduction percent instead of levels
+
+EmModelC <- lm(ln_newdomexp ~ GDP_sq+ 
+                Gov + 
+                AvgCO2ReductionPercent+ 
+                 agriculturallandoflandarea + 
+                birdspeciesthreatened+
+                average_population_density,
+              FinNeeds, na.action = na.exclude)
+summary(EmModelC)
+
+modelEmAIC<-AIC(EmModelC, k = 2)
+modelEmBIC <- BIC(EmModelC)
+modelEmVIF<- vif(EmModelC) #no major autocorrelation
+
+ln_emexp <-
+  EmModelC$coefficients[[1]]*FinNeeds$constant+
+  EmModelC$coefficients[[2]]*FinNeeds$GDP_sq+
+  EmModelC$coefficients[[3]]*FinNeeds$Gov+
+  EmModelC$coefficients[[4]]*FinNeeds$AvgCO2ReductionPercent+
+  EmModelC$coefficients[[5]]*FinNeeds$agriculturallandoflandarea+
+  EmModelC$coefficients[[6]]*FinNeeds$birdspeciesthreatened+
+  EmModelC$coefficients[[7]]*FinNeeds$average_population_density
+EmExp <- exp(ln_emexp)
+
+
+# Drop the outliers
+
+FinNeeds$EmAbsDiff <- abs(FinNeeds$new_domexp - EmExp)
+#drop top two outliers
+N<-2
+altered_dataE<- FinNeeds %>%
+  arrange(desc(EmAbsDiff)) %>%
+  tail(-N)
+
+EmModel2 <- lm(ln_newdomexp ~ GDP_sq+ 
+                 Gov + 
+                 AvgCO2ReductionPercent+ 
+                 agriculturallandoflandarea + 
+                 birdspeciesthreatened+
+                 average_population_density,
+               FinNeeds, na.action = na.exclude)
+summary(EmModel2)
+
+ln_emexp2 <-
+  EmModel2$coefficients[[1]]*FinNeeds$constant+
+  EmModel2$coefficients[[2]]*FinNeeds$GDP_sq+
+  EmModel2$coefficients[[3]]*FinNeeds$Gov+
+  EmModel2$coefficients[[4]]*FinNeeds$AvgCO2ReductionPercent+
+  EmModel2$coefficients[[5]]*FinNeeds$agriculturallandoflandarea+
+  EmModel2$coefficients[[6]]*FinNeeds$birdspeciesthreatened+
+  EmModel2$coefficients[[7]]*FinNeeds$average_population_density
+FinNeeds$EmExtrapExp <- exp(ln_emexp2)
+EmExpSum <- sum(exp(ln_emexp2), na.rm = TRUE)/1E9 #104.86 bil
+#save this model, and the df
 saveRDS(EmModel2, "outputs/EmilyModel.RDS")
 saveRDS(FinNeeds, "outputs/FinancialNeedsDataFromRishman.RDS")

@@ -30,7 +30,8 @@ subdata <- FullData %>%
          ln_agland,
          ln_popdnsty,
          countrycode,
-         constant) %>% 
+         constant,
+         AvgCO2ReductionPercent) %>% 
   arrange(countrycode)
 
 
@@ -72,7 +73,8 @@ Mergedata<-left_join(subdata, gdp.data, by = "countrycode")
          mammalspeciesthreatened,
          Price_Index_yr2011,
          terrestrialandmarineprotectedare,
-         ln_popdnsty,constant)
+         ln_popdnsty,constant,
+         AvgCO2ReductionPercent)
  BAUData<-BAUData %>% 
    mutate(GDP=ifelse(is.na(BAUData$GDP),exp(subdata$lnGDP),BAUData$GDP)) %>% 
   mutate(AverageGDPrate = AverageGDPrate/100) %>% 
@@ -125,7 +127,7 @@ BAUData$AverageGDPrate = NULL
    arrange(year, .by_group = TRUE) %>% 
    mutate(lag = lag(co2emissions)) %>% 
    mutate(pct_change = (co2emissions - lag(co2emissions))/lag(co2emissions)*100) %>% 
-   summarise(AvgCO2Growth = mean(pct_change, na.rm = TRUE))
+   summarise(AvgCO2Growth = mean(pct_change, na.rm = TRUE)) 
  
  #current co2 levels - 2014 is the latest data
  co2.emissions.levels <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2014, end = 2014, extra = TRUE) %>% select(iso3c, EN.ATM.CO2E.KT) %>% 
@@ -139,24 +141,86 @@ BAUData$AverageGDPrate = NULL
    mutate(futureco2level = co2emissions*(growthmultiplier^16)) %>% 
    arrange(countrycode) %>% 
    select(countrycode, futureco2level)
+ 
+ #need to find GDP PPP for 2030 to get Rishman's CO2_EMS value
+ 
+ gdp.ppp.rate <- WDI(indicator = "NY.GDP.MKTP.PP.CD", start = 2008, end = 2018, extra = TRUE) %>%
+   select(iso3c, NY.GDP.MKTP.PP.CD, year) %>% 
+   mutate(countrycode = as.character(iso3c)) %>% 
+   rename('ppp' = NY.GDP.MKTP.PP.CD) %>% 
+   group_by(countrycode) %>% 
+   arrange(year, .by_group = TRUE) %>% 
+   mutate(lag = lag(ppp)) %>% 
+   mutate(pct_change = (ppp- lag(ppp))/lag(ppp)*100) %>% 
+   summarise(ppprate = mean(pct_change, na.rm = TRUE))
+ current.gdp.ppp <- WDI(indicator = "NY.GDP.MKTP.PP.CD", start = 2018, end = 2018, extra = TRUE) %>%
+   select(iso3c, NY.GDP.MKTP.PP.CD) %>% 
+   mutate(countrycode = as.character(iso3c)) %>% 
+   rename("pppGDP" = NY.GDP.MKTP.PP.CD)
+ ppp.future.levels = left_join(current.gdp.ppp,gdp.ppp.rate, by = "countrycode") %>% 
+   mutate(growthmultiplier = (ppprate)/100 + 1) %>% 
+   mutate(futurePPP = pppGDP*(growthmultiplier^16)) %>% 
+   arrange(countrycode) %>% 
+   select(countrycode, futurePPP)
+ #combine PPP and CO2
+ CO2ems<- left_join(co2.future.levels, ppp.future.levels, by = "countrycode") %>% 
+   mutate(futureCO2_EMS = futureco2level/futurePPP)
 
 #merge with business as usual df
  
- BAUData <- left_join(BAUData, co2.future.levels, by = "countrycode")
+ BAUData <- left_join(BAUData, CO2ems, by = "countrycode")
  
  BAUData <- BAUData %>%  
    mutate(ln_futureGDP = log(`2030GDP`)) %>% 
    mutate(ln_futureAgLand = log(futureagland)) %>% 
-   mutate(ln_futureco2 = log(futureco2level))
+   mutate(ln_futureco2 = log(futureCO2_EMS)) %>% 
+   mutate(futureGDP_sq = ln_futureGDP^2)
 
  
 #find extrapolated expenditures using the 3 models. 
  
+ #should I find the 2030 levels of population density, too?
+ 
+ #Waldron Model
  ln_waldronexp <-
    WaldronModel$coefficients[[1]]*BAUData$constant+
    WaldronModel$coefficients[[2]]*BAUData$birdspeciesthreatened+
    WaldronModel$coefficients[[3]]*BAUData$mammalspeciesthreatened+
    WaldronModel$coefficients[[4]]*BAUData$ln_landarea+
-   WaldronModel$coefficients[[5]]*BAUData$terrestrialandmarineprotectedare
- 
-  
+   WaldronModel$coefficients[[5]]*BAUData$Price_Index_yr2011+
+   WaldronModel$coefficients[[6]]*BAUData$terrestrialandmarineprotectedare+
+   WaldronModel$coefficients[[7]]*BAUData$futureGDP_sq+
+   WaldronModel$coefficients[[8]]*BAUData$Gov
+BAUData$ExpWaldron = exp(ln_waldronexp) 
+#total sum of expenditures
+WaldronSum <- sum(BAUData$ExpWaldron, na.rm = TRUE)/1E9 #120.62 bil
+
+#Rishman Model
+
+ln_rishman <-
+  RishmanModel$coefficients[[1]]*BAUData$constant+
+  RishmanModel$coefficients[[2]]*BAUData$birdspeciesthreatened+
+  RishmanModel$coefficients[[3]]*BAUData$ln_landarea+
+  RishmanModel$coefficients[[4]]*BAUData$Gov+
+  RishmanModel$coefficients[[5]]*BAUData$average_population_density+
+  RishmanModel$coefficients[[6]]*BAUData$futureagland+
+  RishmanModel$coefficients[[7]]*BAUData$futureGDP_sq+
+  RishmanModel$coefficients[[8]]*BAUData$futureCO2_EMS
+BAUData$ExpRishman = exp(ln_rishman)  
+#total sum of expenditures
+RishmanSum <- sum(BAUData$ExpRishman, na.rm = TRUE)/1E9 #125.7 bil
+
+#Wise model
+
+ln_wise <-
+  WiseModel$coefficients[[1]]*BAUData$constant+
+  WiseModel$coefficients[[2]]*BAUData$futureGDP_sq+
+  WiseModel$coefficients[[3]]*BAUData$Gov+
+  WiseModel$coefficients[[4]]*BAUData$AvgCO2ReductionPercent+
+  WiseModel$coefficients[[5]]*BAUData$futureagland+
+  WiseModel$coefficients[[6]]*BAUData$birdspeciesthreatened+
+  WiseModel$coefficients[[7]]*BAUData$average_population_density
+BAUData$ExpWise <- exp(ln_wise)
+#total sum of expenditures
+
+WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9 #178 bil
