@@ -568,12 +568,13 @@ modelEmVIF<- vif(EmModelC) #no major autocorrelation
 
 ln_emexp <-
   EmModelC$coefficients[[1]]*FinNeeds$constant+
-  EmModelC$coefficients[[2]]*FinNeeds$GDP_sq+
-  EmModelC$coefficients[[3]]*FinNeeds$Gov+
-  EmModelC$coefficients[[4]]*FinNeeds$AvgCO2ReductionPercent+
-  EmModelC$coefficients[[5]]*FinNeeds$agriculturallandoflandarea+
-  EmModelC$coefficients[[6]]*FinNeeds$birdspeciesthreatened+
-  EmModelC$coefficients[[7]]*FinNeeds$average_population_density
+  EmModelC$coefficients[[2]]*FinNeeds$lnGDP+
+  EmModelC$coefficients[[3]]*FinNeeds$GDP_sq+
+  EmModelC$coefficients[[4]]*FinNeeds$Gov+
+  EmModelC$coefficients[[5]]*FinNeeds$AvgCO2ReductionPercent+
+  EmModelC$coefficients[[6]]*FinNeeds$agriculturallandoflandarea+
+  EmModelC$coefficients[[7]]*FinNeeds$birdspeciesthreatened+
+  EmModelC$coefficients[[8]]*FinNeeds$average_population_density
 EmExp <- exp(ln_emexp)
 
 
@@ -586,7 +587,8 @@ altered_dataE<- FinNeeds %>%
   arrange(desc(EmAbsDiff)) %>%
   tail(-N)
 
-EmModel2 <- lm(ln_newdomexp ~ GDP_sq+ 
+EmModel2 <- lm(ln_newdomexp ~ lnGDP+
+                 GDP_sq+ 
                  Gov + 
                  AvgCO2ReductionPercent+ 
                  agriculturallandoflandarea + 
@@ -597,14 +599,15 @@ summary(EmModel2)
 
 ln_emexp2 <-
   EmModel2$coefficients[[1]]*FinNeeds$constant+
-  EmModel2$coefficients[[2]]*FinNeeds$GDP_sq+
-  EmModel2$coefficients[[3]]*FinNeeds$Gov+
-  EmModel2$coefficients[[4]]*FinNeeds$AvgCO2ReductionPercent+
-  EmModel2$coefficients[[5]]*FinNeeds$agriculturallandoflandarea+
-  EmModel2$coefficients[[6]]*FinNeeds$birdspeciesthreatened+
-  EmModel2$coefficients[[7]]*FinNeeds$average_population_density
+  EmModel2$coefficients[[2]]*FinNeeds$lnGDP+
+  EmModel2$coefficients[[3]]*FinNeeds$GDP_sq+
+  EmModel2$coefficients[[4]]*FinNeeds$Gov+
+  EmModel2$coefficients[[5]]*FinNeeds$AvgCO2ReductionPercent+
+  EmModel2$coefficients[[6]]*FinNeeds$agriculturallandoflandarea+
+  EmModel2$coefficients[[7]]*FinNeeds$birdspeciesthreatened+
+  EmModel2$coefficients[[8]]*FinNeeds$average_population_density
 FinNeeds$EmExtrapExp <- exp(ln_emexp2)
-EmExpSum <- sum(exp(ln_emexp2), na.rm = TRUE)/1E9 #104.86 bil
+EmExpSum <- sum(exp(ln_emexp2), na.rm = TRUE)/1E9 #186.36 bil
 #save this model, and the df
 saveRDS(EmModel2, "outputs/EmilyModel.RDS")
 saveRDS(FinNeeds, "outputs/FinancialNeedsDataFromRishman.RDS")

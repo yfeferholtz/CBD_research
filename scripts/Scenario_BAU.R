@@ -214,13 +214,14 @@ RishmanSum <- sum(BAUData$ExpRishman, na.rm = TRUE)/1E9 #125.7 bil
 
 ln_wise <-
   WiseModel$coefficients[[1]]*BAUData$constant+
-  WiseModel$coefficients[[2]]*BAUData$futureGDP_sq+
-  WiseModel$coefficients[[3]]*BAUData$Gov+
-  WiseModel$coefficients[[4]]*BAUData$AvgCO2ReductionPercent+
-  WiseModel$coefficients[[5]]*BAUData$futureagland+
-  WiseModel$coefficients[[6]]*BAUData$birdspeciesthreatened+
-  WiseModel$coefficients[[7]]*BAUData$average_population_density
+  WiseModel$coefficients[[2]]*BAUData$ln_futureGDP+
+  WiseModel$coefficients[[3]]*BAUData$futureGDP_sq+
+  WiseModel$coefficients[[4]]*BAUData$Gov+
+  WiseModel$coefficients[[5]]*BAUData$AvgCO2ReductionPercent+
+  WiseModel$coefficients[[6]]*BAUData$futureagland+
+  WiseModel$coefficients[[7]]*BAUData$birdspeciesthreatened+
+  WiseModel$coefficients[[8]]*BAUData$average_population_density
 BAUData$ExpWise <- exp(ln_wise)
 #total sum of expenditures
 
-WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9 #178 bil
+WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9 #429.82bil
