@@ -29,7 +29,8 @@ subdata <- FullData %>%
          ln_CO2ems,
          ln_agland,
          ln_popdnsty,
-         countrycode) %>% 
+         countrycode,
+         constant) %>% 
   arrange(countrycode)
 
 
@@ -63,14 +64,25 @@ Mergedata<-left_join(subdata, gdp.data, by = "countrycode")
   select(countries,
          countrycode,
          AverageGDPrate,
-         GDP)
+         GDP,
+         birdspeciesthreatened,
+         ln_landarea,
+         Gov,
+         average_population_density,
+         mammalspeciesthreatened,
+         Price_Index_yr2011,
+         terrestrialandmarineprotectedare,
+         ln_popdnsty,constant)
  BAUData<-BAUData %>% 
    mutate(GDP=ifelse(is.na(BAUData$GDP),exp(subdata$lnGDP),BAUData$GDP)) %>% 
   mutate(AverageGDPrate = AverageGDPrate/100) %>% 
    mutate(GDPmultiplier = 1+AverageGDPrate) %>% 
-   mutate("2030GDP" = GDP*(GDPmultiplier^(12))) %>% 
-   select(countries,countrycode,"2030GDP")
- 
+   mutate("2030GDP" = GDP*(GDPmultiplier^(12)))
+ #get rid of unnecessary GDP data
+BAUData$GDPmultiplier = NULL
+BAUData$GDP =NULL
+BAUData$AverageGDPrate = NULL
+ #save GDP predictions
  saveRDS(BAUData, "outputs/2030GDPprojectionsUSD.RDS")
 
  #Now find ag land growth
@@ -100,3 +112,51 @@ Mergedata<-left_join(subdata, gdp.data, by = "countrycode")
  
  #insert this into the new dataframe
  BAUData <- left_join(BAUData, ag.land.future, by = "countrycode")
+
+ 
+ #do the same for CO2
+ 
+ #change in CO2
+ co2.growth.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2004, end = 2014, extra = TRUE) %>%
+   select(iso3c, EN.ATM.CO2E.KT, year) %>% 
+   mutate(countrycode = as.character(iso3c)) %>% 
+   rename('co2emissions' = EN.ATM.CO2E.KT) %>% 
+   group_by(countrycode) %>% 
+   arrange(year, .by_group = TRUE) %>% 
+   mutate(lag = lag(co2emissions)) %>% 
+   mutate(pct_change = (co2emissions - lag(co2emissions))/lag(co2emissions)*100) %>% 
+   summarise(AvgCO2Growth = mean(pct_change, na.rm = TRUE))
+ 
+ #current co2 levels - 2014 is the latest data
+ co2.emissions.levels <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2014, end = 2014, extra = TRUE) %>% select(iso3c, EN.ATM.CO2E.KT) %>% 
+   mutate(countrycode = as.character(iso3c)) %>% 
+   rename("co2emissions" = EN.ATM.CO2E.KT)
+
+ #merge the two and use growth rate to find 2030 levels
+ 
+ co2.future.levels <- left_join(co2.growth.rate, co2.emissions.levels, by = "countrycode") %>% 
+   mutate(growthmultiplier = (AvgCO2Growth)/100 + 1) %>% 
+   mutate(futureco2level = co2emissions*(growthmultiplier^16)) %>% 
+   arrange(countrycode) %>% 
+   select(countrycode, futureco2level)
+
+#merge with business as usual df
+ 
+ BAUData <- left_join(BAUData, co2.future.levels, by = "countrycode")
+ 
+ BAUData <- BAUData %>%  
+   mutate(ln_futureGDP = log(`2030GDP`)) %>% 
+   mutate(ln_futureAgLand = log(futureagland)) %>% 
+   mutate(ln_futureco2 = log(futureco2level))
+
+ 
+#find extrapolated expenditures using the 3 models. 
+ 
+ ln_waldronexp <-
+   WaldronModel$coefficients[[1]]*BAUData$constant+
+   WaldronModel$coefficients[[2]]*BAUData$birdspeciesthreatened+
+   WaldronModel$coefficients[[3]]*BAUData$mammalspeciesthreatened+
+   WaldronModel$coefficients[[4]]*BAUData$ln_landarea+
+   WaldronModel$coefficients[[5]]*BAUData$terrestrialandmarineprotectedare
+ 
+  
