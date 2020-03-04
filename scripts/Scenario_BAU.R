@@ -31,7 +31,8 @@ subdata <- FullData %>%
          ln_popdnsty,
          countrycode,
          constant,
-         AvgCO2ReductionPercent) %>% 
+         AvgCO2ReductionPercent,
+         new_domexp) %>% 
   arrange(countrycode)
 
 
@@ -74,7 +75,7 @@ Mergedata<-left_join(subdata, gdp.data, by = "countrycode")
          Price_Index_yr2011,
          terrestrialandmarineprotectedare,
          ln_popdnsty,constant,
-         AvgCO2ReductionPercent)
+         AvgCO2ReductionPercent, new_domexp)
  BAUData<-BAUData %>% 
    mutate(GDP=ifelse(is.na(BAUData$GDP),exp(subdata$lnGDP),BAUData$GDP)) %>% 
   mutate(AverageGDPrate = AverageGDPrate/100) %>% 
@@ -226,4 +227,12 @@ BAUData$ExpWise <- exp(ln_wise)
 
 WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9 #429.82bil
 
-write.csv(BAUData, 'outputs/BAUdata.csv')
+
+#fill in extrapolated dom exp where there isn't reported data
+BAUData$Waldron_Manual_Exp <- ifelse(is.na(BAUData$new_domexp)==TRUE, BAUData$ExpWaldron, BAUData$new_domexp)
+BAUData$Rishman_Manual_Exp <- ifelse(is.na(BAUData$new_domexp)==TRUE, BAUData$ExpRishman, BAUData$new_domexp)
+BAUData$Wise_Manual_Exp <- ifelse(is.na(BAUData$new_domexp)==TRUE, BAUData$ExpWise, BAUData$new_domexp)
+
+
+write.csv(BAUData, "outputs/BAUdata.csv")
+#now find needs
