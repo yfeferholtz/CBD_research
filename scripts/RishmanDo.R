@@ -477,58 +477,58 @@ FinNeeds <- FinNeeds %>%
   mutate(ln_popdnsty = log(average_population_density)) %>% 
   mutate(ln_GDP2010 = log(gdpconstant2010us))
 
-EmModel <- lm(ln_newdomexp ~ GDP_sq + 
-                 Gov + 
-                 ln_CO2ems + 
-                 ln_agland + 
-                 birdspeciesthreatened+
-                 ln_popdnsty+
-                ln_landarea,
-              FinNeeds, na.action = na.exclude)
-
-summary(EmModel)
-#model tests
-modelEmAIC<-AIC(EmModel, k = 2)
-modelEmBIC <- BIC(EmModel)
-modelEmVIF<- vif(EmModel) #no autocorrelation
-
-ln_emexp <-
-  EmModel$coefficients[[1]]*FinNeeds$constant+
-  EmModel$coefficients[[2]]*FinNeeds$ln_CO2ems+
-  EmModel$coefficients[[3]]*FinNeeds$ln_agland+
-  EmModel$coefficients[[4]]*FinNeeds$birdspeciesthreatened+
-  EmModel$coefficients[[5]]*FinNeeds$ln_popdnsty
-EmExp <- exp(ln_emexp)
-
-# Drop the outliers
-
-FinNeeds$EmAbsDiff <- abs(FinNeeds$new_domexp - EmExp)
-#drop top two outliers
-N<-2
-altered_dataE<- FinNeeds %>%
-  arrange(desc(EmAbsDiff)) %>%
-  tail(-N)
-
-EmModel2 <- lm(ln_newdomexp ~ lnGDP + 
-                Gov + 
-                ln_CO2ems + 
-                ln_agland + 
-                birdspeciesthreatened+
-                ln_popdnsty,
-              altered_dataE, na.action = na.exclude)
-
-summary(EmModel2)
-
-ln_emexp2 <-
-  EmModel2$coefficients[[1]]*FinNeeds$constant+
-  EmModel2$coefficients[[2]]*FinNeeds$ln_CO2ems+
-  EmModel2$coefficients[[3]]*FinNeeds$ln_agland+
-  EmModel2$coefficients[[4]]*FinNeeds$birdspeciesthreatened+
-  EmModel2$coefficients[[5]]*FinNeeds$ln_popdnsty
-EmExpSum <- sum(exp(ln_emexp2[is.na(ln_emexp2)==FALSE])) #111.124
-#save this model, too
-saveRDS(EmModel2, "outputs/EmilyModel.RDS")
-
+# EmModel <- lm(ln_newdomexp ~ GDP_sq + 
+#                  Gov + 
+#                  ln_CO2ems + 
+#                  ln_agland + 
+#                  birdspeciesthreatened+
+#                  ln_popdnsty+
+#                 ln_landarea,
+#               FinNeeds, na.action = na.exclude)
+# 
+# summary(EmModel)
+# #model tests
+# modelEmAIC<-AIC(EmModel, k = 2)
+# modelEmBIC <- BIC(EmModel)
+# modelEmVIF<- vif(EmModel) #no autocorrelation
+# 
+# ln_emexp <-
+#   EmModel$coefficients[[1]]*FinNeeds$constant+
+#   EmModel$coefficients[[2]]*FinNeeds$ln_CO2ems+
+#   EmModel$coefficients[[3]]*FinNeeds$ln_agland+
+#   EmModel$coefficients[[4]]*FinNeeds$birdspeciesthreatened+
+#   EmModel$coefficients[[5]]*FinNeeds$ln_popdnsty
+# EmExp <- exp(ln_emexp)
+# 
+# # Drop the outliers
+# 
+# FinNeeds$EmAbsDiff <- abs(FinNeeds$new_domexp - EmExp)
+# #drop top two outliers
+# N<-2
+# altered_dataE<- FinNeeds %>%
+#   arrange(desc(EmAbsDiff)) %>%
+#   tail(-N)
+# 
+# EmModel2 <- lm(ln_newdomexp ~ lnGDP + 
+#                 Gov + 
+#                 ln_CO2ems + 
+#                 ln_agland + 
+#                 birdspeciesthreatened+
+#                 ln_popdnsty,
+#               altered_dataE, na.action = na.exclude)
+# 
+# summary(EmModel2)
+# 
+# ln_emexp2 <-
+#   EmModel2$coefficients[[1]]*FinNeeds$constant+
+#   EmModel2$coefficients[[2]]*FinNeeds$ln_CO2ems+
+#   EmModel2$coefficients[[3]]*FinNeeds$ln_agland+
+#   EmModel2$coefficients[[4]]*FinNeeds$birdspeciesthreatened+
+#   EmModel2$coefficients[[5]]*FinNeeds$ln_popdnsty
+# EmExpSum <- sum(exp(ln_emexp2[is.na(ln_emexp2)==FALSE])) #111.124
+# #save this model, too
+# saveRDS(EmModel2, "outputs/EmilyModel.RDS")
+# 
 
 
 #try with change in co2 levels instead
@@ -544,16 +544,20 @@ co2.reduction.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2006, end = 2014
   summarise(AvgCO2ReductionPercent = -mean(pct_change, na.rm = TRUE))
 #add to FinNeeds
 
+
+
 FinNeeds <- left_join(FinNeeds, co2.reduction.rate, by = "countrycode") 
 FinNeeds$ln_CO2reduct <- log(FinNeeds$AvgCO2ReductionPercent)
 
 #now run model with c02 reduction percent instead of levels
 
-EmModelC <- lm(ln_newdomexp ~ GDP_sq+ 
+EmModelC <- lm(ln_newdomexp ~ lnGDP+
+                 GDP_sq+ 
                 Gov + 
                 AvgCO2ReductionPercent+ 
                  agriculturallandoflandarea + 
                 birdspeciesthreatened+
+                 mammalspeciesthreatened+
                 average_population_density,
               FinNeeds, na.action = na.exclude)
 summary(EmModelC)
