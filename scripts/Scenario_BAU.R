@@ -225,3 +225,5 @@ BAUData$ExpWise <- exp(ln_wise)
 #total sum of expenditures
 
 WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9 #429.82bil
+
+write.csv(BAUData, 'outputs/BAUdata.csv')
