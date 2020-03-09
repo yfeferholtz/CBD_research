@@ -45,11 +45,8 @@ gdp.gr.rate<- gdp.gr.rate.per.year %>%
   dplyr::mutate(countrycode = as.character(iso3c)) %>% 
   dplyr::rename("GDPgrowth" = NY.GDP.MKTP.KD.ZG) %>% 
   dplyr::group_by(countrycode) %>% 
-  dplyr::summarise(AverageGDPrate = mean(GDPgrowth, na.rm = TRUE)) %>%
+  dplyr::summarise(AverageGDPrate = mean(GDPgrowth, na.rm = TRUE)) %>% 
   dplyr::arrange(countrycode)
-
-gdp.gr.rate$AverageGDPrate<-ifelse(gdp.gr.rate$AverageGDPrate<0, 0, gdp.gr.rate$AverageGDPrate)
-
 
 #Get 2018 GDP
 gdp.per.country <- WDI(indicator = 'NY.GDP.MKTP.CD', start = 2018, end = 2018, extra = TRUE) %>% 
@@ -60,18 +57,19 @@ gdp.per.country <- WDI(indicator = 'NY.GDP.MKTP.CD', start = 2018, end = 2018, e
   
 #combine data 
 #gdp data
-gdp.data <- inner_join(gdp.per.country, gdp.gr.rate, by = "countrycode")
-#put gdp data into og data
-Mergedata<-left_join(subdata, gdp.data, by = "countrycode")
+gdp.data <- inner_join(gdp.per.country, gdp.gr.rate, by = "countrycode")  %>%
+  mutate(AverageGDPrate.no.negs = ifelse(AverageGDPrate < 0, 0, AverageGDPrate))
 
-#write data to folder for other scenarios
-write.csv(Mergedata, P('data/scenario_data.csv')) 
+  
+ #put gdp data into og data
+Mergedata<-left_join(subdata, gdp.data, by = "countrycode")
 
 #Determine 2030 GDP for each country
 BAUData <- Mergedata %>% 
   dplyr::select(countries,
          countrycode,
          AverageGDPrate,
+         AverageGDPrate.no.negs,
          GDP,
          birdspeciesthreatened,
          ln_landarea,
@@ -81,19 +79,22 @@ BAUData <- Mergedata %>%
          Price_Index_yr2011,
          terrestrialandmarineprotectedare,
          ln_popdnsty,constant,
-         AvgCO2ReductionPercent, new_domexp)
+         AvgCO2ReductionPercent, 
+         new_domexp)
  
 BAUData<-BAUData %>% 
    mutate(GDP=ifelse(is.na(BAUData$GDP),exp(subdata$lnGDP),BAUData$GDP)) %>% 
    mutate(AverageGDPrate = AverageGDPrate/100) %>% 
-   mutate(GDPmultiplier = 1+AverageGDPrate) %>% 
-   mutate("2030GDP" = GDP*(GDPmultiplier^(12)))
+   mutate(AverageGDPrate.no.negs = AverageGDPrate.no.negs/100) %>% 
+   mutate(GDPmultiplier = 1 + AverageGDPrate.no.negs) %>% 
+   mutate('2030GDP' = GDP*(GDPmultiplier^(12))) %>%
+   mutate('2030GDPcont.growth' = GDP*exp(GDPmultiplier*12))
 
 #get rid of unnecessary GDP data
-#BAUData$GDPmultiplier = NULL
-#BAUData$GDP =NULL
-#BAUData$AverageGDPrate = NULL
- #save GDP predictions
+  #BAUData$GDPmultiplier = NULL
+  #BAUData$GDP =NULL
+  #BAUData$AverageGDPrate = NULL
+#save GDP predictions
 saveRDS(BAUData, "outputs/2030GDPprojectionsUSD.RDS")
 
  #Now find ag land growth
@@ -116,22 +117,23 @@ ag.land.growth.rate <- WDI(indicator = 'AG.LND.AGRI.ZS', start=2006, end = 2016,
    rename("aglandpercent" = AG.LND.AGRI.ZS)
 
 # merge the two and calculate 2030 expected percentage of ag by land area using the growth rate, 
- ag.land.future <- left_join(ag.land.growth.rate,ag.land.current,by = "countrycode") %>% 
+ag.land.future <- left_join(ag.land.growth.rate,ag.land.current,by = "countrycode") %>% 
    mutate(growthmultiplier_agland = (AvgAgGrowth)/100+1) %>% 
    mutate(futureagland = aglandpercent*(growthmultiplier_agland^(14))) %>% 
-   dplyr::select(countrycode, futureagland, growthmultiplier_agland) %>% 
+   mutate(futureagland_cont.growth = aglandpercent*exp(growthmultiplier_agland*14)) %>% 
+   dplyr::select(countrycode, futureagland, futureagland_cont.growth, growthmultiplier_agland) %>% 
    arrange(countrycode)
  
- ag.land.data <- inner_join(ag.land.current, ag.land.future, by = "countrycode")
+ag.land.data <- inner_join(ag.land.current, ag.land.future, by = "countrycode")
  #insert this into the new dataframe
- 
+
 BAUData <- left_join(BAUData, ag.land.data, by = "countrycode")
 
  
- #do the same for CO2
+#do the same for CO2
  
- #change in CO2
- co2.growth.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2004, end = 2014, extra = TRUE) %>%
+#change in CO2
+co2.growth.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2004, end = 2014, extra = TRUE) %>%
    dplyr::select(iso3c, EN.ATM.CO2E.KT, year) %>% 
    mutate(countrycode = as.character(iso3c)) %>% 
    rename('co2emissions' = EN.ATM.CO2E.KT) %>% 
@@ -147,13 +149,13 @@ co2.emissions.levels <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2014, end = 20
    mutate(countrycode = as.character(iso3c)) %>% 
    rename("co2emissions" = EN.ATM.CO2E.KT)
 
- #merge the two and use growth rate to find 2030 levels
- 
- co2.future.levels <- left_join(co2.growth.rate, co2.emissions.levels, by = "countrycode") %>% 
+#merge the two and use growth rate to find 2030 levels
+co2.future.levels <- left_join(co2.growth.rate, co2.emissions.levels, by = "countrycode") %>% 
    mutate(growthmultiplier_co2ems = (AvgCO2Growth)/100 + 1) %>% 
    mutate(futureco2level = co2emissions*(growthmultiplier_co2ems^16)) %>% 
+   mutate(futureco2level_cont.growth = co2emissions*exp(growthmultiplier_co2ems*16)) %>% 
    arrange(countrycode) %>% 
-   dplyr::select(countrycode, futureco2level, growthmultiplier_co2ems )
+   dplyr::select(countrycode, futureco2level, futureco2level_cont.growth, growthmultiplier_co2ems )
  
  
 co2.data <- inner_join(co2.emissions.levels, co2.future.levels, by = "countrycode")
@@ -169,21 +171,22 @@ gdp.ppp.rate <- WDI(indicator = "NY.GDP.MKTP.PP.CD", start = 2008, end = 2018, e
    mutate(pct_change = (ppp- lag(ppp))/lag(ppp)*100) %>% 
    summarise(ppprate = mean(pct_change, na.rm = TRUE))
  
- current.gdp.ppp <- WDI(indicator = "NY.GDP.MKTP.PP.CD", start = 2018, end = 2018, extra = TRUE) %>%
+current.gdp.ppp <- WDI(indicator = "NY.GDP.MKTP.PP.CD", start = 2018, end = 2018, extra = TRUE) %>%
    dplyr::select(iso3c, NY.GDP.MKTP.PP.CD) %>% 
    mutate(countrycode = as.character(iso3c)) %>% 
    rename("pppGDP" = NY.GDP.MKTP.PP.CD)
  
- ppp.future.levels = left_join(current.gdp.ppp,gdp.ppp.rate, by = "countrycode") %>% 
+ppp.future.levels = left_join(current.gdp.ppp,gdp.ppp.rate, by = "countrycode") %>% 
    mutate(growthmultiplier_ppplevels = (ppprate)/100 + 1) %>% 
    mutate(futurePPP = pppGDP*(growthmultiplier_ppplevels^16)) %>% 
+   mutate(futurePPP_cont.growth = pppGDP*exp(growthmultiplier_ppplevels*16)) %>% 
    arrange(countrycode) %>% 
-   dplyr::select(countrycode, futurePPP, growthmultiplier_ppplevels)
+   dplyr::select(countrycode, futurePPP, futurePPP_cont.growth, growthmultiplier_ppplevels)
  
  #combine PPP and CO2
- CO2ems<- left_join(co2.data, ppp.future.levels, by = "countrycode") %>% 
-   mutate(futureCO2_EMS = futureco2level/futurePPP)
-
+CO2ems<- left_join(co2.data, ppp.future.levels, by = "countrycode") %>% 
+   mutate(futureCO2_EMS = futureco2level/futurePPP) %>%
+   mutate(futureCO2_EMS.cont.growth = futureco2level_cont.growth/futurePPP_cont.growth)
 #merge with business as usual df
 BAUData <- left_join(BAUData, CO2ems, by = "countrycode")
  
@@ -191,7 +194,11 @@ BAUData <- BAUData %>%
    mutate(ln_futureGDP = log(`2030GDP`)) %>% 
    mutate(ln_futureAgLand = log(futureagland)) %>% 
    mutate(ln_futureco2 = log(futureCO2_EMS)) %>% 
-   mutate(futureGDP_sq = ln_futureGDP^2)
+   mutate(futureGDP_sq = ln_futureGDP^2) %>%
+   mutate(ln_futureGDP.cont.growth = log(`2030GDPcont.growth`)) %>% 
+   mutate(ln_futureAgLand.cont.growth = log(futureagland_cont.growth)) %>% 
+  mutate(ln_futureCO2_EMS.cont.growth = log(futureCO2_EMS.cont.growth)) %>% 
+  mutate(futureGDP_sq.cont.growth = ln_futureGDP.cont.growth^2) 
 
 write.csv(BAUData, P('outputs/BAUdata.csv')) 
  
@@ -253,3 +260,5 @@ BAUData$Wise_Manual_Exp <- ifelse(is.na(BAUData$new_domexp)==TRUE, BAUData$ExpWi
 
 write.csv(BAUData, "outputs/BAUdata.csv")
 #now find needs
+
+

@@ -244,10 +244,8 @@ extraExpAnthMan<- sum(exp(FinNeeds$ln_anthony[is.na(FinNeeds$ln_anthony)==FALSE]
 #Table 5 - extrapolated needs
 modelNeedsAnth <- lm(ln_newneeds ~ ln_yhatAnthony, na.action = na.exclude, FinNeeds)
 summary(modelNeedsAnth)
-modelNeedsAnthMod <- lm(newneeds ~ anthonyMan, na.action = na.exclude, FinNeeds)
+modelNeedsAnthMod <- lm(ln_newneeds ~ ln_anthony, na.action = na.exclude, FinNeeds)
 summary(modelNeedsAnthMod)
-
-
 
 
 #plot Figure 1
@@ -276,13 +274,12 @@ FinNeeds<-FinNeeds %>%
   mutate(ManualExtrap = exp(ln_ManualExtrap))
 #needs model
 modelNeeds2 <- rlm(ln_newneeds ~ ln_ManualExtrap, FinNeeds)
-summary(modelNeeds2)
+
 #determine needs
 ln_needs <-
   modelNeeds2$coefficients[[1]]*FinNeeds$constant+
   modelNeeds2$coefficients[[2]]*FinNeeds$ln_ManualExtrap
-FinNeeds$AnthonyNeeds <- exp(ln_needs)
-sumneeds1<- sum(exp(ln_needs[is.na(ln_needs)==FALSE]))/1E9 #155.07 billion
+sumneeds1 <- sum(exp(ln_needs[is.na(ln_needs)==FALSE]))/1E9 #155.07 billion
 
 # table 7
 #generate expenditure error
@@ -452,7 +449,7 @@ FinNeeds$ln_rishman2 <-
   modelR2rob2$coefficients[[6]]*FinNeeds$agriculturallandoflandarea+
   modelR2rob2$coefficients[[7]]*FinNeeds$GDP_sq+
   modelR2rob2$coefficients[[8]]*FinNeeds$CO2_Ems
-FinNeeds$ExtrapExpRish <- exp(FinNeeds$ln_rishman2)
+ExtrapExp <- exp(FinNeeds$ln_rishman2)
 summodel2<- sum(ExtrapExp[is.na(ExtrapExp)==FALSE])/1E9 #109.73 billion
 
 #error
@@ -473,12 +470,8 @@ ln_needsRish <-
   modelNeedsRish$coefficients[[3]]*FinNeeds$mammalspeciesthreatened+
   modelNeedsRish$coefficients[[4]]*FinNeeds$oilrentsofgdp+
   modelNeedsRish$coefficients[[5]]*FinNeeds$terrestrialprotectedareasoftotal
-FinNeeds$RishmanNeeds <- exp(ln_needsRish)
-sumneedsRish<- sum(exp(ln_needsRish[is.na(ln_needsRish)==FALSE]))/1E9 #153.06 billion (180 countries)
 
-FinNeeds<-FinNeeds %>% 
-  mutate(ln_ManualExtrapRishman = ifelse(is.na(ln_newdomexp)==TRUE, FinNeeds$ln_rishman2, FinNeeds$ln_newdomexp)) %>% 
-  mutate(ManualExtrapRishman = exp(ln_ManualExtrap))
+sumneedsRish<- sum(exp(ln_needsRish[is.na(ln_needsRish)==FALSE]))/1E9 #153.06 billion (180 countries)
 
 
 #Based on Rishman's Analysis, we will use Anthony's model 5 and Rishman model 2.
@@ -550,16 +543,6 @@ FinNeeds <- FinNeeds %>%
 
 #try with change in co2 levels instead
 library(WDI)
-<<<<<<< HEAD
-co2.reduction.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2006, end = 2014, extra = TRUE)%>%
-  dplyr::select(iso3c, EN.ATM.CO2E.KT, year) %>% 
-  mutate(countrycode = as.character(iso3c)) %>% 
-  dplyr::rename('co2emissions' = EN.ATM.CO2E.KT) %>% 
-  dplyr::group_by(countrycode) %>% 
-  dplyr::arrange(year, .by_group = TRUE) %>% 
-  mutate(lag = lag(co2emissions)) %>% 
-  mutate(pct_change = (co2emissions - lag(co2emissions))/lag(co2emissions)*100) %>% 
-=======
 co2.reduction.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2006, end = 2014, extra = TRUE) %>%
   dplyr::select(iso3c, EN.ATM.CO2E.KT, year) %>% 
   dplyr::mutate(countrycode = as.character(iso3c)) %>% 
@@ -568,7 +551,6 @@ co2.reduction.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2006, end = 2014
   dplyr::arrange(year, .by_group = TRUE) %>% 
   dplyr::mutate(lag = lag(co2emissions)) %>% 
   dplyr::mutate(pct_change = (co2emissions - lag(co2emissions))/lag(co2emissions)*100) %>% 
->>>>>>> ed43b9b50ca305d7ba81d77cf586cf975b72ae09
   dplyr::summarise(AvgCO2ReductionPercent = -mean(pct_change, na.rm = TRUE))
 #add to FinNeeds
 
@@ -604,7 +586,7 @@ ln_emexp <-
   EmModelC$coefficients[[7]]*FinNeeds$birdspeciesthreatened+
   EmModelC$coefficients[[8]]*FinNeeds$average_population_density
 EmExp <- exp(ln_emexp)
-#243.19bil
+
 
 # Drop the outliers
 
@@ -623,7 +605,7 @@ EmModel2 <- lm(ln_newdomexp ~
                  agriculturallandoflandarea + 
                  birdspeciesthreatened+
                  average_population_density,
-               altered_dataE, na.action = na.exclude)
+               FinNeeds, na.action = na.exclude)
 summary(EmModel2)
 
 ln_emexp2 <-
@@ -636,45 +618,7 @@ ln_emexp2 <-
   EmModel2$coefficients[[7]]*FinNeeds$birdspeciesthreatened+
   EmModel2$coefficients[[8]]*FinNeeds$average_population_density
 FinNeeds$EmExtrapExp <- exp(ln_emexp2)
-EmExpSum <- sum(exp(ln_emexp2), na.rm = TRUE)/1E9 #189.92
-
-this <- data.frame(1:69) %>% 
-  mutate(fittedvalues = EmModel2$fitted.values) %>% 
-  mutate(residuals = EmModel2$residuals)
-ggplot(this, aes(fittedvalues, residuals))+
-  geom_point()+
-  geom_smooth(method = "lm", se = FALSE)
-
+EmExpSum <- sum(exp(ln_emexp2), na.rm = TRUE)/1E9 #186.36 bil
 #save this model, and the df
 saveRDS(EmModel2, "outputs/EmilyModel.RDS")
-
-#fill in extrapolated expenditures where not reported
-FinNeeds$Wise_Manual_Exp <- ifelse(is.na(FinNeeds$new_domexp)==TRUE, FinNeeds$EmExtrapExp, FinNeeds$new_domexp)
-
-#extrapolate needs from expenditures
-modelNeedsEm <- lm(new_domexp ~ EmExtrapExp, na.action = na.exclude, FinNeeds)
-summary(modelNeedsEm)
-#manually extrapolate
-EmNeeds <-
-  modelNeedsEm$coefficients[[1]]*FinNeeds$constant+
-  modelNeedsEm$coefficients[[2]]*FinNeeds$EmExtrapExp
-FinNeeds$EmNeeds<-EmNeeds
-#sum
-EmNeedsExtrap <- sum(EmNeeds, na.rm = TRUE)/1E9 #268 bill
-
 saveRDS(FinNeeds, "outputs/FinancialNeedsDataFromRishman.RDS")
-
-#save the model outputs. 
-outputdata <- FinNeeds %>% 
-  dplyr::select(countries,
-                new_domexp,
-                anthonyMan,
-                ManualExtrap,
-                AnthonyNeeds,
-                ExtrapExpRish,
-                ManualExtrapRishman,
-                RishmanNeeds,
-                EmExtrapExp,
-                Wise_Manual_Exp,
-                EmNeeds )
-write.csv(outputdata, "outputs/mlrComparison.csv")
