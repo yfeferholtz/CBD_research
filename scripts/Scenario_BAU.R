@@ -206,6 +206,7 @@ co2.emissions.levels.ppp <- WDI(indicator = 'EN.ATM.CO2E.PP.GD', start = 2014, e
   dplyr::select(iso3c, EN.ATM.CO2E.PP.GD) %>%
   mutate(countrycode = as.character(iso3c)) %>%
   rename("co2ppp" = EN.ATM.CO2E.PP.GD)
+BAUData<- left_join(BAUData, co2.emissions.levels.ppp, by = "countrycode")
 
 co2.ppp.future.levels <- left_join(co2.ppp.gr.rate, co2.emissions.levels.ppp, by = "countrycode") %>% 
      mutate(growthmultiplier_co2ems = (AvgCO2Growthppp)/100 + 1) %>%
