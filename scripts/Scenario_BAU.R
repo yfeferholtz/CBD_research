@@ -13,9 +13,10 @@ FullData <- readRDS(P("outputs/FinancialNeedsDataFromRishman.RDS"))
 
 #create subdata.frame with only attributes used
 library(dplyr)
+detach("package:plyr", unload=TRUE)
 #Can't use select function if MASS is required.
 subdata <- FullData %>% 
-  select(countries,birdspeciesthreatened,
+  dplyr::select(countries,birdspeciesthreatened,
          ln_landarea,
          Gov,
          average_population_density,
@@ -41,19 +42,19 @@ library(WDI)
 gdp.gr.rate.per.year = WDI(indicator='NY.GDP.MKTP.KD.ZG', country = "all", start=2008, end=2018, extra = TRUE)
 gdp.gr.rate<- gdp.gr.rate.per.year %>% 
   dplyr::select(iso3c, NY.GDP.MKTP.KD.ZG) %>% 
-  mutate(countrycode = as.character(iso3c)) %>% 
-  rename("GDPgrowth" = NY.GDP.MKTP.KD.ZG) %>% 
-  group_by(countrycode) %>% 
-  summarise(AverageGDPrate = mean(GDPgrowth, na.rm = TRUE)) %>% 
-  arrange(countrycode)
+  dplyr::mutate(countrycode = as.character(iso3c)) %>% 
+  dplyr::rename("GDPgrowth" = NY.GDP.MKTP.KD.ZG) %>% 
+  dplyr::group_by(countrycode) %>% 
+  dplyr::summarise(AverageGDPrate = mean(GDPgrowth, na.rm = TRUE)) %>% 
+  dplyr::arrange(countrycode)
 
 
 #Get 2018 GDP
 gdp.per.country <- WDI(indicator = 'NY.GDP.MKTP.CD', start = 2018, end = 2018, extra = TRUE) %>% 
-  mutate(countrycode = as.character(iso3c)) %>% 
-  rename("GDP" = NY.GDP.MKTP.CD) %>% 
-  select(countrycode, GDP) %>% 
-  arrange(countrycode)
+  dplyr::mutate(countrycode = as.character(iso3c)) %>% 
+  dplyr::rename("GDP" = NY.GDP.MKTP.CD) %>% 
+  dplyr::select(countrycode, GDP) %>% 
+  dplyr::arrange(countrycode)
   
 #combine data 
 #gdp data
@@ -62,8 +63,8 @@ gdp.data <- inner_join(gdp.per.country, gdp.gr.rate, by = "countrycode")
 Mergedata<-left_join(subdata, gdp.data, by = "countrycode")
 
 #Determine 2030 GDP for each country
- BAUData <- Mergedata %>% 
-  select(countries,
+BAUData <- Mergedata %>% 
+  dplyr::select(countries,
          countrycode,
          AverageGDPrate,
          GDP,
@@ -76,23 +77,25 @@ Mergedata<-left_join(subdata, gdp.data, by = "countrycode")
          terrestrialandmarineprotectedare,
          ln_popdnsty,constant,
          AvgCO2ReductionPercent, new_domexp)
- BAUData<-BAUData %>% 
+ 
+BAUData<-BAUData %>% 
    mutate(GDP=ifelse(is.na(BAUData$GDP),exp(subdata$lnGDP),BAUData$GDP)) %>% 
-  mutate(AverageGDPrate = AverageGDPrate/100) %>% 
+   mutate(AverageGDPrate = AverageGDPrate/100) %>% 
    mutate(GDPmultiplier = 1+AverageGDPrate) %>% 
    mutate("2030GDP" = GDP*(GDPmultiplier^(12)))
- #get rid of unnecessary GDP data
-BAUData$GDPmultiplier = NULL
-BAUData$GDP =NULL
-BAUData$AverageGDPrate = NULL
+
+#get rid of unnecessary GDP data
+#BAUData$GDPmultiplier = NULL
+#BAUData$GDP =NULL
+#BAUData$AverageGDPrate = NULL
  #save GDP predictions
- saveRDS(BAUData, "outputs/2030GDPprojectionsUSD.RDS")
+saveRDS(BAUData, "outputs/2030GDPprojectionsUSD.RDS")
 
  #Now find ag land growth
  
  #find growth rate of ag land for 2006 to 2016 by getting the percentage of ag land by land area for each year and calculating growth rate for each year. Then take the average.
- ag.land.growth.rate <- WDI(indicator = 'AG.LND.AGRI.ZS', start=2006, end = 2016, extra = TRUE) %>% 
-   select(iso3c, AG.LND.AGRI.ZS, year) %>% 
+ag.land.growth.rate <- WDI(indicator = 'AG.LND.AGRI.ZS', start=2006, end = 2016, extra = TRUE) %>% 
+   dplyr::select(iso3c, AG.LND.AGRI.ZS, year) %>% 
    mutate(countrycode = as.character(iso3c)) %>% 
    rename("aglandpercent" = AG.LND.AGRI.ZS) %>% 
    group_by(countrycode) %>% 
@@ -101,27 +104,30 @@ BAUData$AverageGDPrate = NULL
    mutate(pct_change = (aglandpercent - lag(aglandpercent))/lag(aglandpercent)*100) %>% 
    summarise(AvgAgGrowth = mean(pct_change, na.rm = TRUE))
 
- #download current ag land percent of land - most current year is 2016
+# download current ag land percent of land - most current year is 2016
  ag.land.current <- WDI(indicator = 'AG.LND.AGRI.ZS', start=2016, end = 2016, extra = TRUE) %>% 
-   select(iso3c, AG.LND.AGRI.ZS) %>% 
+   dplyr::select(iso3c, AG.LND.AGRI.ZS) %>% 
    mutate(countrycode = as.character(iso3c)) %>% 
    rename("aglandpercent" = AG.LND.AGRI.ZS)
- #merge the two and calculate 2030 expected percentage of ag by land area using the growth rate, 
+
+# merge the two and calculate 2030 expected percentage of ag by land area using the growth rate, 
  ag.land.future <- left_join(ag.land.growth.rate,ag.land.current,by = "countrycode") %>% 
-   mutate(growthmultiplier = (AvgAgGrowth)/100+1) %>% 
-   mutate(futureagland = aglandpercent*(growthmultiplier^(14))) %>% 
-   select(countrycode, futureagland) %>% 
+   mutate(growthmultiplier_agland = (AvgAgGrowth)/100+1) %>% 
+   mutate(futureagland = aglandpercent*(growthmultiplier_agland^(14))) %>% 
+   dplyr::select(countrycode, futureagland, growthmultiplier_agland) %>% 
    arrange(countrycode)
  
+ ag.land.data <- inner_join(ag.land.current, ag.land.future, by = "countrycode")
  #insert this into the new dataframe
- BAUData <- left_join(BAUData, ag.land.future, by = "countrycode")
+ 
+BAUData <- left_join(BAUData, ag.land.data, by = "countrycode")
 
  
  #do the same for CO2
  
  #change in CO2
  co2.growth.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2004, end = 2014, extra = TRUE) %>%
-   select(iso3c, EN.ATM.CO2E.KT, year) %>% 
+   dplyr::select(iso3c, EN.ATM.CO2E.KT, year) %>% 
    mutate(countrycode = as.character(iso3c)) %>% 
    rename('co2emissions' = EN.ATM.CO2E.KT) %>% 
    group_by(countrycode) %>% 
@@ -131,22 +137,25 @@ BAUData$AverageGDPrate = NULL
    summarise(AvgCO2Growth = mean(pct_change, na.rm = TRUE)) 
  
  #current co2 levels - 2014 is the latest data
- co2.emissions.levels <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2014, end = 2014, extra = TRUE) %>% select(iso3c, EN.ATM.CO2E.KT) %>% 
+co2.emissions.levels <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2014, end = 2014, extra = TRUE) %>% 
+   dplyr::select(iso3c, EN.ATM.CO2E.KT) %>% 
    mutate(countrycode = as.character(iso3c)) %>% 
    rename("co2emissions" = EN.ATM.CO2E.KT)
 
  #merge the two and use growth rate to find 2030 levels
  
  co2.future.levels <- left_join(co2.growth.rate, co2.emissions.levels, by = "countrycode") %>% 
-   mutate(growthmultiplier = (AvgCO2Growth)/100 + 1) %>% 
-   mutate(futureco2level = co2emissions*(growthmultiplier^16)) %>% 
+   mutate(growthmultiplier_co2ems = (AvgCO2Growth)/100 + 1) %>% 
+   mutate(futureco2level = co2emissions*(growthmultiplier_co2ems^16)) %>% 
    arrange(countrycode) %>% 
-   select(countrycode, futureco2level)
+   dplyr::select(countrycode, futureco2level, growthmultiplier_co2ems )
  
+ 
+co2.data <- inner_join(co2.emissions.levels, co2.future.levels, by = "countrycode")
  #need to find GDP PPP for 2030 to get Rishman's CO2_EMS value
  
- gdp.ppp.rate <- WDI(indicator = "NY.GDP.MKTP.PP.CD", start = 2008, end = 2018, extra = TRUE) %>%
-   select(iso3c, NY.GDP.MKTP.PP.CD, year) %>% 
+gdp.ppp.rate <- WDI(indicator = "NY.GDP.MKTP.PP.CD", start = 2008, end = 2018, extra = TRUE) %>%
+   dplyr::select(iso3c, NY.GDP.MKTP.PP.CD, year) %>% 
    mutate(countrycode = as.character(iso3c)) %>% 
    rename('ppp' = NY.GDP.MKTP.PP.CD) %>% 
    group_by(countrycode) %>% 
@@ -154,29 +163,32 @@ BAUData$AverageGDPrate = NULL
    mutate(lag = lag(ppp)) %>% 
    mutate(pct_change = (ppp- lag(ppp))/lag(ppp)*100) %>% 
    summarise(ppprate = mean(pct_change, na.rm = TRUE))
+ 
  current.gdp.ppp <- WDI(indicator = "NY.GDP.MKTP.PP.CD", start = 2018, end = 2018, extra = TRUE) %>%
-   select(iso3c, NY.GDP.MKTP.PP.CD) %>% 
+   dplyr::select(iso3c, NY.GDP.MKTP.PP.CD) %>% 
    mutate(countrycode = as.character(iso3c)) %>% 
    rename("pppGDP" = NY.GDP.MKTP.PP.CD)
+ 
  ppp.future.levels = left_join(current.gdp.ppp,gdp.ppp.rate, by = "countrycode") %>% 
-   mutate(growthmultiplier = (ppprate)/100 + 1) %>% 
-   mutate(futurePPP = pppGDP*(growthmultiplier^16)) %>% 
+   mutate(growthmultiplier_ppplevels = (ppprate)/100 + 1) %>% 
+   mutate(futurePPP = pppGDP*(growthmultiplier_ppplevels^16)) %>% 
    arrange(countrycode) %>% 
-   select(countrycode, futurePPP)
+   dplyr::select(countrycode, futurePPP, growthmultiplier_ppplevels)
+ 
  #combine PPP and CO2
- CO2ems<- left_join(co2.future.levels, ppp.future.levels, by = "countrycode") %>% 
+ CO2ems<- left_join(co2.data, ppp.future.levels, by = "countrycode") %>% 
    mutate(futureCO2_EMS = futureco2level/futurePPP)
 
 #merge with business as usual df
+BAUData <- left_join(BAUData, CO2ems, by = "countrycode")
  
- BAUData <- left_join(BAUData, CO2ems, by = "countrycode")
- 
- BAUData <- BAUData %>%  
+BAUData <- BAUData %>%  
    mutate(ln_futureGDP = log(`2030GDP`)) %>% 
    mutate(ln_futureAgLand = log(futureagland)) %>% 
    mutate(ln_futureco2 = log(futureCO2_EMS)) %>% 
    mutate(futureGDP_sq = ln_futureGDP^2)
 
+write.csv(BAUData, P('outputs/BAUdata.csv')) 
  
 #find extrapolated expenditures using the 3 models. 
  
@@ -220,7 +232,7 @@ ln_wise <-
   WiseModel$coefficients[[4]]*BAUData$Gov+
   WiseModel$coefficients[[5]]*BAUData$AvgCO2ReductionPercent+
   WiseModel$coefficients[[6]]*BAUData$futureagland+
-  WiseModel$coefficients[[7]]*BAUData$birdspeciesthreatened+
+  WiseModel$coefficients[[7]]*BAUData$birdspeciesthreatened +
   WiseModel$coefficients[[8]]*BAUData$average_population_density
 BAUData$ExpWise <- exp(ln_wise)
 #total sum of expenditures

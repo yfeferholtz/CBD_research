@@ -244,7 +244,7 @@ extraExpAnthMan<- sum(exp(FinNeeds$ln_anthony[is.na(FinNeeds$ln_anthony)==FALSE]
 #Table 5 - extrapolated needs
 modelNeedsAnth <- lm(ln_newneeds ~ ln_yhatAnthony, na.action = na.exclude, FinNeeds)
 summary(modelNeedsAnth)
-modelNeedsAnthMod <- lm(new_needs ~ anthonyMan, na.action = na.exclude, FinNeeds)
+modelNeedsAnthMod <- lm(ln_newneeds ~ ln_anthony, na.action = na.exclude, FinNeeds)
 summary(modelNeedsAnthMod)
 
 
@@ -253,10 +253,20 @@ summary(modelNeedsAnthMod)
 #plot Figure 1
 library(ggplot2)
 
-ggplot(altered_data,aes(x=ln_newdomexp,y= ln_anthony))+
+ggplot(altered_data,aes(x=ln_anthony, y=  ln_newdomexp))+
   geom_point()+
-  geom_smooth(method = "lm", se = FALSE)+
-  theme_classic()#can't figure out why this is formatting improperly
+  geom_smooth(method = "lm", se = FALSE) +
+  xlim(10.5, 22.5) +
+  ylim(10.5, 22.5) +
+  xlab('Predicted Domestic Expenditures in Logs') +
+  ylab('Observed Domestic Expenditures in Logs') +
+  geom_text(x=15, y=11.5, label="Barbados", color = 'red') +
+  geom_text(x=17, y=10.5, label="Guinea", color = 'red') +
+  geom_text(x=13, y=12.5, label="Maldives", color = 'red') +
+  geom_text(x=21, y=22.5, label="Exact prediction", color = 'blue') +
+  theme_classic()
+
+#can't figure out why this is formatting improperly
 
 # Table 6 - 
 
@@ -540,6 +550,7 @@ FinNeeds <- FinNeeds %>%
 
 #try with change in co2 levels instead
 library(WDI)
+<<<<<<< HEAD
 co2.reduction.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2006, end = 2014, extra = TRUE)%>%
   dplyr::select(iso3c, EN.ATM.CO2E.KT, year) %>% 
   mutate(countrycode = as.character(iso3c)) %>% 
@@ -548,6 +559,16 @@ co2.reduction.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2006, end = 2014
   dplyr::arrange(year, .by_group = TRUE) %>% 
   mutate(lag = lag(co2emissions)) %>% 
   mutate(pct_change = (co2emissions - lag(co2emissions))/lag(co2emissions)*100) %>% 
+=======
+co2.reduction.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2006, end = 2014, extra = TRUE) %>%
+  dplyr::select(iso3c, EN.ATM.CO2E.KT, year) %>% 
+  dplyr::mutate(countrycode = as.character(iso3c)) %>% 
+  dplyr::rename('co2emissions' = EN.ATM.CO2E.KT) %>% 
+  dplyr::group_by(countrycode) %>% 
+  dplyr::arrange(year, .by_group = TRUE) %>% 
+  dplyr::mutate(lag = lag(co2emissions)) %>% 
+  dplyr::mutate(pct_change = (co2emissions - lag(co2emissions))/lag(co2emissions)*100) %>% 
+>>>>>>> ed43b9b50ca305d7ba81d77cf586cf975b72ae09
   dplyr::summarise(AvgCO2ReductionPercent = -mean(pct_change, na.rm = TRUE))
 #add to FinNeeds
 
@@ -594,7 +615,8 @@ altered_dataE<- FinNeeds %>%
   arrange(desc(EmAbsDiff)) %>%
   tail(-N)
 
-EmModel2 <- lm(ln_newdomexp ~ lnGDP+
+EmModel2 <- lm(ln_newdomexp ~ 
+                 lnGDP+
                  GDP_sq+ 
                  Gov + 
                  AvgCO2ReductionPercent+ 
