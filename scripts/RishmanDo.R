@@ -244,7 +244,7 @@ extraExpAnthMan<- sum(exp(FinNeeds$ln_anthony[is.na(FinNeeds$ln_anthony)==FALSE]
 #Table 5 - extrapolated needs
 modelNeedsAnth <- lm(ln_newneeds ~ ln_yhatAnthony, na.action = na.exclude, FinNeeds)
 summary(modelNeedsAnth)
-modelNeedsAnthMod <- lm(ln_newneeds ~ ln_anthony, na.action = na.exclude, FinNeeds)
+modelNeedsAnthMod <- lm(newneeds ~ anthonyMan, na.action = na.exclude, FinNeeds)
 summary(modelNeedsAnthMod)
 
 
@@ -274,12 +274,15 @@ FinNeeds<-FinNeeds %>%
   mutate(ManualExtrap = exp(ln_ManualExtrap))
 #needs model
 modelNeeds2 <- rlm(ln_newneeds ~ ln_ManualExtrap, FinNeeds)
-
+summary(modelNeeds2)
 #determine needs
 ln_needs <-
   modelNeeds2$coefficients[[1]]*FinNeeds$constant+
   modelNeeds2$coefficients[[2]]*FinNeeds$ln_ManualExtrap
 sumneeds1 <- sum(exp(ln_needs[is.na(ln_needs)==FALSE]))/1E9 #155.07 billion
+
+#save this needs model
+saveRDS(modelNeeds2, "outputs/AnthonyNeeds.RDS")
 
 # table 7
 #generate expenditure error
@@ -456,8 +459,14 @@ summodel2<- sum(ExtrapExp[is.na(ExtrapExp)==FALSE])/1E9 #109.73 billion
 errorRish <- FinNeeds$newneeds - ExtrapExp
 
 
+
+
 #Table 10
-modelNeedsRish <- lm(ln_newneeds ~ ln_rishman + 
+FinNeeds<-FinNeeds %>% 
+  mutate(ln_ManualExtrapRishman = ifelse(is.na(ln_newdomexp)==TRUE, FinNeeds$ln_rishman2, FinNeeds$ln_newdomexp)) %>% 
+  mutate(ManualExtrapRishman = exp(ln_ManualExtrap))
+
+modelNeedsRish <- lm(ln_newneeds ~ ln_ManualExtrapRishman + 
                        mammalspeciesthreatened + 
                        oilrentsofgdp +
                        terrestrialprotectedareasoftotal, na.action = na.exclude, FinNeeds)
@@ -471,13 +480,14 @@ ln_needsRish <-
   modelNeedsRish$coefficients[[4]]*FinNeeds$oilrentsofgdp+
   modelNeedsRish$coefficients[[5]]*FinNeeds$terrestrialprotectedareasoftotal
 
-sumneedsRish<- sum(exp(ln_needsRish[is.na(ln_needsRish)==FALSE]))/1E9 #153.06 billion (180 countries)
+sumneedsRish<- sum(exp(ln_needsRish[is.na(ln_needsRish)==FALSE]))/1E9 #177.28 billion (180 countries)
 
 
 #Based on Rishman's Analysis, we will use Anthony's model 5 and Rishman model 2.
 #save the model with top two outliers removed
 saveRDS(modelR22, "outputs/RishmanModel2.RDS")
 saveRDS(modelAnthony5rob, "outputs/WaldronModel5.RDS")
+saveRDS(modelNeedsRish, "outputs/RishmanNeeds.RDS")
 
 #Try to find a model where ag, GDP and CO2 are significant
 #make logs of co2 and ag
@@ -543,7 +553,7 @@ FinNeeds <- FinNeeds %>%
 
 #try with change in co2 levels instead
 library(WDI)
-co2.reduction.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2006, end = 2014, extra = TRUE) %>%
+co2.reduction.rate <- WDI(indicator = "EN.ATM.CO2E.KT", start = 2004, end = 2014, extra = TRUE)
   dplyr::select(iso3c, EN.ATM.CO2E.KT, year) %>% 
   dplyr::mutate(countrycode = as.character(iso3c)) %>% 
   dplyr::rename('co2emissions' = EN.ATM.CO2E.KT) %>% 
@@ -553,10 +563,11 @@ co2.reduction.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2006, end = 2014
   dplyr::mutate(pct_change = (co2emissions - lag(co2emissions))/lag(co2emissions)*100) %>% 
   dplyr::summarise(AvgCO2ReductionPercent = -mean(pct_change, na.rm = TRUE))
 #add to FinNeeds
+  #world bank data not downloading now
+FinNeeds<-readRDS("outputs/FinancialNeedsDataFromRishman.RDS")
 
 
-
-FinNeeds <- left_join(FinNeeds, co2.reduction.rate, by = "countrycode") 
+#FinNeeds <- inner_join(FinNeeds, co2.reduction.rate, by = "countrycode") 
 FinNeeds$ln_CO2reduct <- log(FinNeeds$AvgCO2ReductionPercent)
 
 #now run model with c02 reduction percent instead of levels

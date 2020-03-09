@@ -208,9 +208,9 @@ co2.emissions.levels.ppp <- WDI(indicator = 'EN.ATM.CO2E.PP.GD', start = 2014, e
 
 co2.ppp.future.levels <- left_join(co2.ppp.gr.rate, co2.emissions.levels.ppp, by = "countrycode") %>% 
      mutate(growthmultiplier_co2ems = (AvgCO2Growthppp)/100 + 1) %>%
-     mutate(futureco2level = co2ppp*(growthmultiplier_co2ems^16)) %>%
+     mutate(futureco2levelppp = co2ppp*(growthmultiplier_co2ems^16)) %>%
      arrange(countrycode) %>%
-     dplyr::select(countrycode, futureco2level, growthmultiplier_co2ems )
+     dplyr::select(countrycode, futureco2levelppp, growthmultiplier_co2ems )
  
  #combine PPP and CO2
  # CO2ems<- left_join(co2.data, ppp.future.levels, by = "countrycode") %>% 
@@ -222,7 +222,7 @@ BAUData <- left_join(BAUData, co2.ppp.future.levels, by = "countrycode")
 BAUData <- BAUData %>%  
    mutate(ln_futureGDP = log(`2030GDP`)) %>% 
    mutate(ln_futureAgLand = log(futureagland)) %>% 
-   mutate(ln_futureco2 = log(futureco2level)) %>% 
+   mutate(ln_futureco2ppp = log(futureco2levelppp)) %>% 
    mutate(futureGDP_sq = ln_futureGDP^2)
 
 write.csv(BAUData, P('outputs/BAUdata.csv')) 
@@ -255,7 +255,7 @@ ln_rishman <-
   RishmanModel$coefficients[[5]]*BAUData$average_population_density+
   RishmanModel$coefficients[[6]]*BAUData$futureagland+
   RishmanModel$coefficients[[7]]*BAUData$futureGDP_sq+
-  RishmanModel$coefficients[[8]]*BAUData$futureco2level
+  RishmanModel$coefficients[[8]]*BAUData$futureco2levelppp
 BAUData$ExpRishman = exp(ln_rishman)  
 #total sum of expenditures
 RishmanSum <- sum(BAUData$ExpRishman, na.rm = TRUE)/1E9 #125.56 bil
