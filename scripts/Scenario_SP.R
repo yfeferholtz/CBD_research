@@ -1,9 +1,9 @@
 #Sustainable Pathway Scenario
 
 ###Assumptions###
-  # effective climate change mitigation -> 0% CO2 change 
-  # land use change effectively managed -> 0% land use change
-  # slow GDP growth -> growth rate to 1%
+  # CO2 growth rate same as 2008-2018
+  # no net land use change from 2018
+  # GDP growth rate same as 2008-2018
 
 #setup
 rm(list=ls())
