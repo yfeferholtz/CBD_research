@@ -134,36 +134,36 @@ BAUData <- left_join(BAUData, ag.land.data, by = "countrycode")
  #do the same for CO2
  
  #change in CO2
- co2.growth.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2004, end = 2014, extra = TRUE) %>%
+ co2.growth.rate <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2004, end = 2014, extra = TRUE)%>%
    dplyr::select(iso3c, EN.ATM.CO2E.KT, year) %>%
    mutate(countrycode = as.character(iso3c)) %>%
-   rename('co2emissions' = EN.ATM.CO2E.KT) %>%
-   group_by(countrycode) %>%
-   arrange(year, .by_group = TRUE) %>%
+   dplyr::rename('co2emissions' = EN.ATM.CO2E.KT) %>%
+   dplyr::group_by(countrycode) %>%
+   dplyr::arrange(year, .by_group = TRUE) %>%
    mutate(lag = lag(co2emissions)) %>%
    mutate(pct_change = (co2emissions - lag(co2emissions))/lag(co2emissions)*100) %>%
-   summarise(AvgCO2Growth = mean(pct_change, na.rm = TRUE))
+   dplyr::summarise(AvgCO2Growth = mean(pct_change, na.rm = TRUE))
 
  #current co2 levels - 2014 is the latest data
 co2.emissions.levels <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2014, end = 2014, extra = TRUE) %>%
    dplyr::select(iso3c, EN.ATM.CO2E.KT) %>%
    mutate(countrycode = as.character(iso3c)) %>%
-   rename("co2emissions" = EN.ATM.CO2E.KT)
+   dplyr::rename(co2emissions = EN.ATM.CO2E.KT)
 #save co2 and ag data for other scenarios
 co2data<- left_join(co2.emissions.levels, co2.growth.rate, by = "countrycode")
-scendata<- left_join(scendata, co2data, by = "countrycode") %>% 
-  write.csv("data/scen_data.csv")
+scendata<- left_join(scendata, co2data, by = "countrycode") 
 # 
 #  #merge the two and use growth rate to find 2030 levels
-#  
-#  co2.future.levels <- left_join(co2.growth.rate, co2.emissions.levels, by = "countrycode") %>% 
-#    mutate(growthmultiplier_co2ems = (AvgCO2Growth)/100 + 1) %>% 
-#    mutate(futureco2level = co2emissions*(growthmultiplier_co2ems^16)) %>% 
-#    arrange(countrycode) %>% 
-#    dplyr::select(countrycode, futureco2level, growthmultiplier_co2ems )
-#  
-#  
-# co2.data <- inner_join(co2.emissions.levels, co2.future.levels, by = "countrycode")
+
+ co2.future.levels <- left_join(co2.growth.rate, co2.emissions.levels, by = "countrycode") %>%
+   mutate(growthmultiplier_co2ems = (AvgCO2Growth)/100 + 1) %>%
+   mutate(futureco2level = co2emissions*(growthmultiplier_co2ems^16)) %>%
+   dplyr::arrange(countrycode) %>%
+   dplyr::select(countrycode, futureco2level, growthmultiplier_co2ems )
+
+
+BAUData<- left_join(BAUData, co2.future.levels, by = "countrycode")
+BAUData<- left_join(BAUData, co2data, by = "countrycode")
  #need to find GDP PPP for 2030 to get Rishman's CO2_EMS value
  
 # gdp.ppp.rate <- WDI(indicator = "NY.GDP.MKTP.PP.CD", start = 2008, end = 2018, extra = TRUE) %>%

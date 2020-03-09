@@ -637,6 +637,11 @@ FinNeeds<- FinNeeds %>%
 EmilyNeeds <- lm(ln_newneeds ~ ln_Emily_Manual_Exp, FinNeeds, na.action = na.exclude)
 summary(EmilyNeeds)
 
+ln_needs_emily <-
+  EmilyNeeds$coefficients[[1]]*FinNeeds$constant+
+  EmilyNeeds$coefficients[[2]]*FinNeeds$ln_Emily_Manual_Exp
+FinNeeds$EmilyNeeds <- exp(ln_needs_emily)
+
 saveRDS(EmilyNeeds, "outputs/EmilyNeeds.RDS")
 
 #save this model, and the df
