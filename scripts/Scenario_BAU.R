@@ -232,7 +232,7 @@ ln_wise <-
   WiseModel$coefficients[[4]]*BAUData$Gov+
   WiseModel$coefficients[[5]]*BAUData$AvgCO2ReductionPercent+
   WiseModel$coefficients[[6]]*BAUData$futureagland+
-  WiseModel$coefficients[[7]]*BAUData$birdspeciesthreatened+
+  WiseModel$coefficients[[7]]*BAUData$birdspeciesthreatened +
   WiseModel$coefficients[[8]]*BAUData$average_population_density
 BAUData$ExpWise <- exp(ln_wise)
 #total sum of expenditures
