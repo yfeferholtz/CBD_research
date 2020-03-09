@@ -281,8 +281,7 @@ ln_needs <-
   modelNeeds2$coefficients[[2]]*FinNeeds$ln_ManualExtrap
 sumneeds1 <- sum(exp(ln_needs[is.na(ln_needs)==FALSE]))/1E9 #155.07 billion
 
-#save this needs model
-saveRDS(modelNeeds2, "outputs/AnthonyNeeds.RDS")
+
 
 # table 7
 #generate expenditure error
@@ -452,8 +451,8 @@ FinNeeds$ln_rishman2 <-
   modelR2rob2$coefficients[[6]]*FinNeeds$agriculturallandoflandarea+
   modelR2rob2$coefficients[[7]]*FinNeeds$GDP_sq+
   modelR2rob2$coefficients[[8]]*FinNeeds$CO2_Ems
-ExtrapExp <- exp(FinNeeds$ln_rishman2)
-summodel2<- sum(ExtrapExp[is.na(ExtrapExp)==FALSE])/1E9 #109.73 billion
+FinNeeds$ExtrapExpRishman <- exp(FinNeeds$ln_rishman2)
+summodel2<- sum(FinNeeds$ExtrapExpRishman[is.na(FinNeeds$ExtrapExpRishman)==FALSE])/1E9 #109.73 billion
 
 #error
 errorRish <- FinNeeds$newneeds - ExtrapExp
@@ -485,9 +484,7 @@ sumneedsRish<- sum(exp(ln_needsRish[is.na(ln_needsRish)==FALSE]))/1E9 #177.28 bi
 
 #Based on Rishman's Analysis, we will use Anthony's model 5 and Rishman model 2.
 #save the model with top two outliers removed
-saveRDS(modelR22, "outputs/RishmanModel2.RDS")
-saveRDS(modelAnthony5rob, "outputs/WaldronModel5.RDS")
-saveRDS(modelNeedsRish, "outputs/RishmanNeeds.RDS")
+
 
 #Try to find a model where ag, GDP and CO2 are significant
 #make logs of co2 and ag
@@ -640,8 +637,19 @@ FinNeeds<- FinNeeds %>%
 EmilyNeeds <- lm(ln_newneeds ~ ln_Emily_Manual_Exp, FinNeeds, na.action = na.exclude)
 summary(EmilyNeeds)
 
+ln_needs_emily <-
+  EmilyNeeds$coefficients[[1]]*FinNeeds$constant+
+  EmilyNeeds$coefficients[[2]]*FinNeeds$ln_Emily_Manual_Exp
+FinNeeds$EmilyNeeds <- exp(ln_needs_emily)
+
 saveRDS(EmilyNeeds, "outputs/EmilyNeeds.RDS")
 
 #save this model, and the df
 saveRDS(EmModel2, "outputs/EmilyModel.RDS")
-saveRDS(FinNeeds, "outputs/FinancialNeedsDataFromRishman.RDS")
+write.csv(FinNeeds, "outputs/FinancialNeedsDataFromRishman.csv")
+
+saveRDS(modelR22, "outputs/RishmanModel2.RDS")
+saveRDS(modelAnthony5rob, "outputs/WaldronModel5.RDS")
+saveRDS(modelNeedsRish, "outputs/RishmanNeeds.RDS")
+#save waldron needs model
+saveRDS(modelNeeds2, "outputs/AnthonyNeeds.RDS")
