@@ -1,14 +1,18 @@
 #Sustainable Pathway Scenario
 
 ###Assumptions###
-# CO2 growth rate same as 2008-2018
-# no net land use change from 2018
-# GDP growth rate same as 2008-2018
+  # CO2 growth rate same as 2008-2018
+  # no net land use change from 2018
+  # GDP growth rate same as 2008-2018
 
 #setup
 rm(list=ls())
 library(devtools)
 P <- rprojroot::find_rstudio_root_file
+
+WaldronModel <- readRDS(P("outputs/WaldronModel5.RDS"))
+RishmanModel <- readRDS(P("outputs/RishmanModel2.RDS"))
+WiseModel <- readRDS(P("outputs/EmilyModel.RDS"))
 
 #read data
 BAUData<- read.csv(P("outputs/BAUdata.csv"))
@@ -39,7 +43,7 @@ ln_rishman <-
   RishmanModel$coefficients[[6]]*BAUData$aglandpercent+ #only change
   RishmanModel$coefficients[[7]]*BAUData$futureGDP_sq+
   RishmanModel$coefficients[[8]]*BAUData$futureCO2_EMS
-BAUData$ExpRishman = exp(ln_rishman)  
+BAUData$ExpRishman = exp(ln_rishman)
 #total sum of expenditures
 RishmanSum <- sum(BAUData$ExpRishman, na.rm = TRUE)/1E9
 #128.2 Billion, slightly higher than BAU
@@ -58,3 +62,4 @@ ln_wise <-
 BAUData$ExpWise <- exp(ln_wise)
 WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9
 #426 Billion, slightly less than BAU
+

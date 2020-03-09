@@ -10,6 +10,10 @@ rm(list=ls())
 library(devtools)
 P <- rprojroot::find_rstudio_root_file
 
+WaldronModel <- readRDS(P("outputs/WaldronModel5.RDS"))
+RishmanModel <- readRDS(P("outputs/RishmanModel2.RDS"))
+WiseModel <- readRDS(P("outputs/EmilyModel.RDS"))
+
 #read data 
 BAUData<- read.csv(P("outputs/BAUdata.csv"))
 
