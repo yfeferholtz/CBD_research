@@ -33,7 +33,8 @@ subdata <- FullData %>%
          countrycode,
          constant,
          AvgCO2ReductionPercent,
-         new_domexp) %>% 
+         new_domexp,
+         ln_newdomexp) %>% 
   arrange(countrycode)
 
 
@@ -81,7 +82,7 @@ BAUData <- Mergedata %>%
          Price_Index_yr2011,
          terrestrialandmarineprotectedare,
          ln_popdnsty,constant,
-         AvgCO2ReductionPercent, new_domexp)
+         AvgCO2ReductionPercent, new_domexp, ln_newdomexp)
  
 BAUData<-BAUData %>% 
    mutate(GDP=ifelse(is.na(BAUData$GDP),exp(subdata$lnGDP),BAUData$GDP)) %>% 
@@ -232,7 +233,7 @@ write.csv(BAUData, P('outputs/BAUdata.csv'))
  #should I find the 2030 levels of population density, too?
  
  #Waldron Model
- ln_waldronexp <-
+ BAUData$ln_waldronexp <-
    WaldronModel$coefficients[[1]]*BAUData$constant+
    WaldronModel$coefficients[[2]]*BAUData$birdspeciesthreatened+
    WaldronModel$coefficients[[3]]*BAUData$mammalspeciesthreatened+
@@ -241,13 +242,13 @@ write.csv(BAUData, P('outputs/BAUdata.csv'))
    WaldronModel$coefficients[[6]]*BAUData$terrestrialandmarineprotectedare+
    WaldronModel$coefficients[[7]]*BAUData$futureGDP_sq+
    WaldronModel$coefficients[[8]]*BAUData$Gov
-BAUData$ExpWaldron = exp(ln_waldronexp) 
+BAUData$ExpWaldron = exp(BAUData$ln_waldronexp) 
 #total sum of expenditures
 WaldronSum <- sum(BAUData$ExpWaldron, na.rm = TRUE)/1E9 #120.62 bil
 
 #Rishman Model
 
-ln_rishman <-
+BAUData$ln_rishman <-
   RishmanModel$coefficients[[1]]*BAUData$constant+
   RishmanModel$coefficients[[2]]*BAUData$birdspeciesthreatened+
   RishmanModel$coefficients[[3]]*BAUData$ln_landarea+
@@ -256,13 +257,13 @@ ln_rishman <-
   RishmanModel$coefficients[[6]]*BAUData$futureagland+
   RishmanModel$coefficients[[7]]*BAUData$futureGDP_sq+
   RishmanModel$coefficients[[8]]*BAUData$futureco2levelppp
-BAUData$ExpRishman = exp(ln_rishman)  
+BAUData$ExpRishman = exp(BAUData$ln_rishman)  
 #total sum of expenditures
 RishmanSum <- sum(BAUData$ExpRishman, na.rm = TRUE)/1E9 #125.56 bil
 
 #Wise model
 
-ln_wise <-
+BAUData$ln_wise <-
   WiseModel$coefficients[[1]]*BAUData$constant+
   WiseModel$coefficients[[2]]*BAUData$ln_futureGDP+
   WiseModel$coefficients[[3]]*BAUData$futureGDP_sq+
@@ -271,17 +272,59 @@ ln_wise <-
   WiseModel$coefficients[[6]]*BAUData$futureagland+
   WiseModel$coefficients[[7]]*BAUData$birdspeciesthreatened +
   WiseModel$coefficients[[8]]*BAUData$average_population_density
-BAUData$ExpWise <- exp(ln_wise)
+BAUData$ExpWise <- exp(BAUData$ln_wise)
 #total sum of expenditures
 
 WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9 #429.82bil
 
 
 #fill in extrapolated dom exp where there isn't reported data
-BAUData$Waldron_Manual_Exp <- ifelse(is.na(BAUData$new_domexp)==TRUE, BAUData$ExpWaldron, BAUData$new_domexp)
-BAUData$Rishman_Manual_Exp <- ifelse(is.na(BAUData$new_domexp)==TRUE, BAUData$ExpRishman, BAUData$new_domexp)
-BAUData$Wise_Manual_Exp <- ifelse(is.na(BAUData$new_domexp)==TRUE, BAUData$ExpWise, BAUData$new_domexp)
+BAUData<- BAUData %>% 
+  mutate(ln_Waldron_Manual_Exp = ifelse(is.na(BAUData$ln_newdomexp)==TRUE, BAUData$ln_waldronexp, BAUData$ln_newdomexp) )%>% 
+  mutate(Waldron_Manual_Exp = exp(ln_Waldron_Manual_Exp)) %>% 
+  mutate(ln_Rishman_Manual_Exp = ifelse(is.na(BAUData$ln_newdomexp)==TRUE, BAUData$ln_rishman, BAUData$ln_newdomexp)) %>% 
+  mutate(Rishman_Manual_Exp = exp(ln_Rishman_Manual_Exp))
+
+BAUData$ln_Wise_Manual_Exp <- ifelse(is.na(BAUData$ln_newdomexp)==TRUE, BAUData$ln_wise, BAUData$ln_newdomexp)
+BAUData$Wise_Manual_Exp <- exp(BAUData$ln_Wise_Manual_Exp)
+
+
+#Now find needs
+
+#Anthony Model
+WaldronNeeds<-readRDS("outputs/AnthonyNeeds.RDS")
+#manually extrapolate needs
+ln_needs_waldron <-
+  WaldronNeeds$coefficients[[1]]*BAUData$constant+
+  WaldronNeeds$coefficients[[2]]*BAUData$ln_Waldron_Manual_Exp
+BAUData$WaldronNeeds <- exp(ln_needs_waldron)
+WaldronNeedsSum <- sum(BAUData$WaldronNeeds, na.rm = TRUE)/1E9 #163.61
+
+BAUData$oilrentsofgdp <- FullData$oilrentsofgdp
+#Rishman Model
+
+RishmanNeeds <- readRDS("outputs/RishmanNeeds.RDS")
+#manually extrapolate
+ln_needs_rishman <- 
+  RishmanNeeds$coefficients[[1]]*BAUData$constant+
+  RishmanNeeds$coefficients[[2]]*BAUData$ln_Rishman_Manual_Exp+
+  RishmanNeeds$coefficients[[3]]*BAUData$mammalspeciesthreatened+
+  RishmanNeeds$coefficients[[4]]*BAUData$oilrentsofgdp+
+  RishmanNeeds$coefficients[[5]]*BAUData$terrestrialandmarineprotectedare
+BAUData$RishmanNeeds <- exp(ln_needs_rishman)
+SumRishmanNeeds <- sum(BAUData$RishmanNeeds, na.rm = TRUE)/1E9 #378.79
+
+#Wise Model
+
+WiseNeeds <- readRDS("outputs/EmilyNeeds.RDS")
+
+ln_needs_wise <-
+  WiseNeeds$coefficients[[1]]*BAUData$constant+
+  WiseNeeds$coefficients[[2]]*BAUData$ln_Wise_Manual_Exp
+BAUData$WiseNeeds <- exp(ln_needs_wise)
+SumWiseNeeds <- sum(BAUData$WiseNeeds, na.rm = TRUE)/1E9 #377.53
 
 
 write.csv(BAUData, "outputs/BAUdata.csv")
-#now find needs
+
+

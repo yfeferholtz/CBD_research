@@ -619,7 +619,7 @@ EmModel2 <- lm(ln_newdomexp ~
                FinNeeds, na.action = na.exclude)
 summary(EmModel2)
 
-ln_emexp2 <-
+FinNeeds$ln_emexp2 <-
   EmModel2$coefficients[[1]]*FinNeeds$constant+
   EmModel2$coefficients[[2]]*FinNeeds$lnGDP+
   EmModel2$coefficients[[3]]*FinNeeds$GDP_sq+
@@ -630,6 +630,18 @@ ln_emexp2 <-
   EmModel2$coefficients[[8]]*FinNeeds$average_population_density
 FinNeeds$EmExtrapExp <- exp(ln_emexp2)
 EmExpSum <- sum(exp(ln_emexp2), na.rm = TRUE)/1E9 #186.36 bil
+
+
+FinNeeds<- FinNeeds %>% 
+  mutate(ln_Emily_Manual_Exp = ifelse(is.na(FinNeeds$ln_newdomexp), FinNeeds$ln_emexp2, FinNeeds$ln_newdomexp)) %>% 
+  mutate(Emily_Manual_Exp = exp(ln_Emily_Manual_Exp))
+
+#needs model
+EmilyNeeds <- lm(ln_newneeds ~ ln_Emily_Manual_Exp, FinNeeds, na.action = na.exclude)
+summary(EmilyNeeds)
+
+saveRDS(EmilyNeeds, "outputs/EmilyNeeds.RDS")
+
 #save this model, and the df
 saveRDS(EmModel2, "outputs/EmilyModel.RDS")
 saveRDS(FinNeeds, "outputs/FinancialNeedsDataFromRishman.RDS")
