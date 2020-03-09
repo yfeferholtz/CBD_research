@@ -42,7 +42,7 @@ ln_rishman <-
   RishmanModel$coefficients[[5]]*BAUData$average_population_density+
   RishmanModel$coefficients[[6]]*BAUData$aglandpercent+ #only change
   RishmanModel$coefficients[[7]]*BAUData$futureGDP_sq+
-  RishmanModel$coefficients[[8]]*BAUData$futureCO2_EMS
+  RishmanModel$coefficients[[8]]*BAUData$futureco2levelppp
 BAUData$ExpRishman = exp(ln_rishman)
 #total sum of expenditures
 RishmanSum <- sum(BAUData$ExpRishman, na.rm = TRUE)/1E9
