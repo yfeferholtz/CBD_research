@@ -244,7 +244,7 @@ extraExpAnthMan<- sum(exp(FinNeeds$ln_anthony[is.na(FinNeeds$ln_anthony)==FALSE]
 #Table 5 - extrapolated needs
 modelNeedsAnth <- lm(ln_newneeds ~ ln_yhatAnthony, na.action = na.exclude, FinNeeds)
 summary(modelNeedsAnth)
-modelNeedsAnthMod <- lm(ln_newneeds ~ ln_anthony, na.action = na.exclude, FinNeeds)
+modelNeedsAnthMod <- lm(newneeds ~ anthonyMan, na.action = na.exclude, FinNeeds)
 summary(modelNeedsAnthMod)
 
 

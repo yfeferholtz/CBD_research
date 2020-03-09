@@ -45,8 +45,10 @@ gdp.gr.rate<- gdp.gr.rate.per.year %>%
   dplyr::mutate(countrycode = as.character(iso3c)) %>% 
   dplyr::rename("GDPgrowth" = NY.GDP.MKTP.KD.ZG) %>% 
   dplyr::group_by(countrycode) %>% 
-  dplyr::summarise(AverageGDPrate = mean(GDPgrowth, na.rm = TRUE)) %>% 
+  dplyr::summarise(AverageGDPrate = mean(GDPgrowth, na.rm = TRUE)) %>%
   dplyr::arrange(countrycode)
+
+gdp.gr.rate$AverageGDPrate<-ifelse(gdp.gr.rate$AverageGDPrate<0, 0, gdp.gr.rate$AverageGDPrate)
 
 
 #Get 2018 GDP
