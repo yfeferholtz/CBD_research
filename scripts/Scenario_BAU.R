@@ -62,6 +62,9 @@ gdp.data <- inner_join(gdp.per.country, gdp.gr.rate, by = "countrycode")
 #put gdp data into og data
 Mergedata<-left_join(subdata, gdp.data, by = "countrycode")
 
+#write data to folder for other scenarios
+write.csv(Mergedata, P('data/scenario_data.csv')) 
+
 #Determine 2030 GDP for each country
 BAUData <- Mergedata %>% 
   dplyr::select(countries,
