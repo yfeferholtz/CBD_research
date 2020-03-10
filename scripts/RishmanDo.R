@@ -25,7 +25,8 @@ FinNeeds <- FinNeeds %>%
   mutate(new_domexp = dom_exp*1000) %>%
   mutate(ln_newdomexp = log(new_domexp)) %>%
   mutate(new_needs = needs*1000) %>%
-  mutate(ln_newneeds = log(new_needs))
+  mutate(ln_newneeds = log(new_needs)) %>% 
+  dplyr::arrange(countries)
 
 #add constant to data1
 constant <- rep(1, 212)
@@ -550,8 +551,8 @@ FinNeeds <- FinNeeds %>%
 
 #try with change in co2 levels instead
 library(WDI)
-co2.reduction.rate <- WDI(indicator = "EN.ATM.CO2E.KT", start = 2004, end = 2014, extra = TRUE)
-  dplyr::select(iso3c, EN.ATM.CO2E.KT, year) %>% 
+co2.reduction.rate <- WDI(indicator = "EN.ATM.CO2E.KT", start = 2004, end = 2014, extra = TRUE) %>% 
+  dplyr::select(iso3c, EN.ATM.CO2E.KT, year)%>% 
   dplyr::mutate(countrycode = as.character(iso3c)) %>% 
   dplyr::rename('co2emissions' = EN.ATM.CO2E.KT) %>% 
   dplyr::group_by(countrycode) %>% 
@@ -561,10 +562,11 @@ co2.reduction.rate <- WDI(indicator = "EN.ATM.CO2E.KT", start = 2004, end = 2014
   dplyr::summarise(AvgCO2ReductionPercent = -mean(pct_change, na.rm = TRUE))
 #add to FinNeeds
   #world bank data not downloading now
-FinNeeds<-readRDS("outputs/FinancialNeedsDataFromRishman.RDS")
+#FinNeeds<-readRDS("outputs/FinancialNeedsDataFromRishman.RDS")
 
 
-#FinNeeds <- inner_join(FinNeeds, co2.reduction.rate, by = "countrycode") 
+FinNeeds <- inner_join(FinNeeds, co2.reduction.rate, by = "countrycode") %>% 
+  rename(AvgCO2ReductionPercent = "AverageCO2ReductionPercent.x")
 FinNeeds$ln_CO2reduct <- log(FinNeeds$AvgCO2ReductionPercent)
 
 #now run model with c02 reduction percent instead of levels
@@ -593,13 +595,13 @@ ln_emexp <-
   EmModelC$coefficients[[6]]*FinNeeds$agriculturallandoflandarea+
   EmModelC$coefficients[[7]]*FinNeeds$birdspeciesthreatened+
   EmModelC$coefficients[[8]]*FinNeeds$average_population_density
-EmExp <- exp(ln_emexp)
+FinNeeds$EmExp1 <- exp(ln_emexp)
 
 
 # Drop the outliers
 
-FinNeeds$EmAbsDiff <- abs(FinNeeds$new_domexp - EmExp)
-#drop top two outliers
+FinNeeds$EmAbsDiff <- abs(FinNeeds$new_domexp - FinNeeds$EmExp1)
+#drop top four outliers
 N<-2
 altered_dataE<- FinNeeds %>%
   arrange(desc(EmAbsDiff)) %>%
@@ -613,7 +615,7 @@ EmModel2 <- lm(ln_newdomexp ~
                  agriculturallandoflandarea + 
                  birdspeciesthreatened+
                  average_population_density,
-               FinNeeds, na.action = na.exclude)
+               altered_dataE, na.action = na.exclude)
 summary(EmModel2)
 
 FinNeeds$ln_emexp2 <-
@@ -625,8 +627,8 @@ FinNeeds$ln_emexp2 <-
   EmModel2$coefficients[[6]]*FinNeeds$agriculturallandoflandarea+
   EmModel2$coefficients[[7]]*FinNeeds$birdspeciesthreatened+
   EmModel2$coefficients[[8]]*FinNeeds$average_population_density
-FinNeeds$EmExtrapExp <- exp(ln_emexp2)
-EmExpSum <- sum(exp(ln_emexp2), na.rm = TRUE)/1E9 #186.36 bil
+FinNeeds$EmExtrapExp <- exp(FinNeeds$ln_emexp2)
+EmExpSum <- sum(exp(FinNeeds$ln_emexp2), na.rm = TRUE)/1E9 #170.68
 
 
 FinNeeds<- FinNeeds %>% 
@@ -653,3 +655,4 @@ saveRDS(modelAnthony5rob, "outputs/WaldronModel5.RDS")
 saveRDS(modelNeedsRish, "outputs/RishmanNeeds.RDS")
 #save waldron needs model
 saveRDS(modelNeeds2, "outputs/AnthonyNeeds.RDS")
+
