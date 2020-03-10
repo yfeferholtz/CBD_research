@@ -90,16 +90,16 @@ ln_needs_rishman <-
   RishmanNeeds$coefficients[[3]]*SPdata$mammalspeciesthreatened+
   RishmanNeeds$coefficients[[4]]*SPdata$oilrentsofgdp+
   RishmanNeeds$coefficients[[5]]*SPdata$terrestrialandmarineprotectedare
-SPdata$RishmanNeeds <- exp(ln_needs_rishman)
-SumRishmanNeeds <- sum(SPdata$RishmanNeeds, na.rm = TRUE)/1E9 #184.8
+SPdata$RishmanNeedsSP <- exp(ln_needs_rishman)
+SumRishmanNeeds <- sum(SPdata$RishmanNeedsSP, na.rm = TRUE)/1E9 #184.8
 
 # Wise Needs
 
 ln_needs_wise <-
   WiseNeeds$coefficients[[1]]*SPdata$constant+
   WiseNeeds$coefficients[[2]]*ln_wise
-SPdata$WiseNeeds <- exp(ln_needs_wise)
-SumWiseNeeds <- sum(SPdata$WiseNeeds, na.rm = TRUE)/1E9 #463.1
+SPdata$WiseNeedsSP <- exp(ln_needs_wise)
+SumWiseNeeds <- sum(SPdata$WiseNeedsSP, na.rm = TRUE)/1E9 #463.1
 
 
 
