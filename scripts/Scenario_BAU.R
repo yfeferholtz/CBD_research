@@ -7,12 +7,12 @@ P <- rprojroot::find_rstudio_root_file
 WaldronModel <- readRDS(P("outputs/WaldronModel5.RDS"))
 RishmanModel <- readRDS(P("outputs/RishmanModel2.RDS"))
 WiseModel <- readRDS(P("outputs/EmilyModel.RDS"))
-
+library(dplyr)
 #read in original data
-FullData <- readRDS(P("outputs/FinancialNeedsDataFromRishman.RDS"))
+FullData <- read.csv(P("outputs/FinancialNeedsDataFromRishman.csv"), stringsAsFactors = FALSE) 
 
 #create subdata.frame with only attributes used
-library(dplyr)
+
 detach("package:plyr", unload=TRUE)
 #Can't use select function if MASS is required.
 subdata <- FullData %>% 
@@ -152,6 +152,7 @@ co2.emissions.levels <- WDI(indicator = 'EN.ATM.CO2E.KT', start = 2014, end = 20
 #save co2 and ag data for other scenarios
 co2data<- left_join(co2.emissions.levels, co2.growth.rate, by = "countrycode")
 scendata<- left_join(scendata, co2data, by = "countrycode") 
+write.csv(scendata, "data/scen_data.csv")
 # 
 #  #merge the two and use growth rate to find 2030 levels
 
@@ -278,18 +279,16 @@ BAUData$ExpWise <- exp(BAUData$ln_wise)
 
 WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9 #429.82bil
 
-BAUData <- BAUData %>%
-  arrange(countries)
 
-#fill in extrapolated dom exp where there isn't reported data
-BAUData<- BAUData %>% 
-  mutate(ln_Waldron_Manual_Exp = ifelse(is.na(BAUData$ln_newdomexp)==TRUE, BAUData$ln_waldronexp, BAUData$ln_newdomexp) )%>% 
-  mutate(Waldron_Manual_Exp = exp(ln_Waldron_Manual_Exp)) %>% 
-  mutate(ln_Rishman_Manual_Exp = ifelse(is.na(BAUData$ln_newdomexp)==TRUE, BAUData$ln_rishman, BAUData$ln_newdomexp)) %>% 
-  mutate(Rishman_Manual_Exp = exp(ln_Rishman_Manual_Exp))
-
-BAUData$ln_Wise_Manual_Exp <- ifelse(is.na(BAUData$ln_newdomexp)==TRUE, BAUData$ln_wise, BAUData$ln_newdomexp)
-BAUData$Wise_Manual_Exp <- exp(BAUData$ln_Wise_Manual_Exp)
+#fill in extrapolated dom exp where there isn't reported data - shouldnt do this for future data?
+# BAUData<- BAUData %>% 
+#   mutate(ln_Waldron_Manual_Exp = ifelse(is.na(BAUData$ln_newdomexp)==TRUE, BAUData$ln_waldronexp, BAUData$ln_newdomexp) )%>% 
+#   mutate(Waldron_Manual_Exp = exp(ln_Waldron_Manual_Exp)) %>% 
+#   mutate(ln_Rishman_Manual_Exp = ifelse(is.na(BAUData$ln_newdomexp)==TRUE, BAUData$ln_rishman, BAUData$ln_newdomexp)) %>% 
+#   mutate(Rishman_Manual_Exp = exp(ln_Rishman_Manual_Exp))
+# 
+# BAUData$ln_Wise_Manual_Exp <- ifelse(is.na(BAUData$ln_newdomexp)==TRUE, BAUData$ln_wise, BAUData$ln_newdomexp)
+# BAUData$Wise_Manual_Exp <- exp(BAUData$ln_Wise_Manual_Exp)
 
 
 #Now find needs
@@ -299,9 +298,9 @@ WaldronNeeds<-readRDS("outputs/AnthonyNeeds.RDS")
 #manually extrapolate needs
 ln_needs_waldron <-
   WaldronNeeds$coefficients[[1]]*BAUData$constant+
-  WaldronNeeds$coefficients[[2]]*BAUData$ln_Waldron_Manual_Exp
+  WaldronNeeds$coefficients[[2]]*BAUData$ln_waldronexp
 BAUData$WaldronNeeds <- exp(ln_needs_waldron)
-WaldronNeedsSum <- sum(BAUData$WaldronNeeds, na.rm = TRUE)/1E9 #163.61
+WaldronNeedsSum <- sum(BAUData$WaldronNeeds, na.rm = TRUE)/1E9 #156.39
 
 BAUData$oilrentsofgdp <- FullData$oilrentsofgdp
 #Rishman Model
@@ -310,12 +309,12 @@ RishmanNeeds <- readRDS("outputs/RishmanNeeds.RDS")
 #manually extrapolate
 ln_needs_rishman <- 
   RishmanNeeds$coefficients[[1]]*BAUData$constant+
-  RishmanNeeds$coefficients[[2]]*BAUData$ln_Rishman_Manual_Exp+
+  RishmanNeeds$coefficients[[2]]*BAUData$ln_rishman+
   RishmanNeeds$coefficients[[3]]*BAUData$mammalspeciesthreatened+
   RishmanNeeds$coefficients[[4]]*BAUData$oilrentsofgdp+
   RishmanNeeds$coefficients[[5]]*BAUData$terrestrialandmarineprotectedare
 BAUData$RishmanNeeds <- exp(ln_needs_rishman)
-SumRishmanNeeds <- sum(BAUData$RishmanNeeds, na.rm = TRUE)/1E9 #378.79
+SumRishmanNeeds <- sum(BAUData$RishmanNeeds, na.rm = TRUE)/1E9 #182.7
 
 #Wise Model
 
@@ -323,11 +322,12 @@ WiseNeeds <- readRDS("outputs/EmilyNeeds.RDS")
 
 ln_needs_wise <-
   WiseNeeds$coefficients[[1]]*BAUData$constant+
-  WiseNeeds$coefficients[[2]]*BAUData$ln_Wise_Manual_Exp
+  WiseNeeds$coefficients[[2]]*BAUData$ln_wise
 BAUData$WiseNeeds <- exp(ln_needs_wise)
 SumWiseNeeds <- sum(BAUData$WiseNeeds, na.rm = TRUE)/1E9 #377.53
 
-
+BAUData<-BAUData %>% 
+  dplyr::arrange(countries)
 write.csv(BAUData, "outputs/BAUdata.csv")
 
 

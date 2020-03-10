@@ -565,8 +565,7 @@ co2.reduction.rate <- WDI(indicator = "EN.ATM.CO2E.KT", start = 2004, end = 2014
 #FinNeeds<-readRDS("outputs/FinancialNeedsDataFromRishman.RDS")
 
 
-FinNeeds <- inner_join(FinNeeds, co2.reduction.rate, by = "countrycode") %>% 
-  rename(AvgCO2ReductionPercent = "AverageCO2ReductionPercent.x")
+FinNeeds <- inner_join(FinNeeds, co2.reduction.rate, by = "countrycode") 
 FinNeeds$ln_CO2reduct <- log(FinNeeds$AvgCO2ReductionPercent)
 
 #now run model with c02 reduction percent instead of levels
@@ -628,7 +627,7 @@ FinNeeds$ln_emexp2 <-
   EmModel2$coefficients[[7]]*FinNeeds$birdspeciesthreatened+
   EmModel2$coefficients[[8]]*FinNeeds$average_population_density
 FinNeeds$EmExtrapExp <- exp(FinNeeds$ln_emexp2)
-EmExpSum <- sum(exp(FinNeeds$ln_emexp2), na.rm = TRUE)/1E9 #170.68
+EmExpSum <- sum(exp(FinNeeds$ln_emexp2), na.rm = TRUE)/1E9 #180.56
 
 
 FinNeeds<- FinNeeds %>% 
