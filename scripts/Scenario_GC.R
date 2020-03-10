@@ -36,6 +36,7 @@ ln_waldronexp <-
   WaldronModel$coefficients[[7]]*GCData$futureGDP_sq+
   WaldronModel$coefficients[[8]]*GCData$Gov
 GCData$ExpWaldron = exp(ln_waldronexp) 
+
 #total sum
 WaldronSum <- sum(GCData$ExpWaldron, na.rm = TRUE)/1E9
 #107.899 Billion, quite a bit less than BAU
@@ -72,6 +73,7 @@ WiseSum <- sum(GCData$ExpWise, na.rm = TRUE)/1E9
 #256 Billion, quite a bit less than BAU
 
 
-
+GCData <- GCData %>%
+  arrange(countries)
 
 

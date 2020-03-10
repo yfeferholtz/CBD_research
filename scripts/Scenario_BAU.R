@@ -278,6 +278,8 @@ BAUData$ExpWise <- exp(BAUData$ln_wise)
 
 WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9 #429.82bil
 
+BAUData <- BAUData %>%
+  arrange(countries)
 
 #fill in extrapolated dom exp where there isn't reported data
 BAUData<- BAUData %>% 

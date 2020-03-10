@@ -63,3 +63,5 @@ BAUData$ExpWise <- exp(ln_wise)
 WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9
 #426 Billion, slightly less than BAU
 
+BAUData <- BAUData %>%
+  arrange(countries)
