@@ -4,16 +4,16 @@ library(devtools)
 P <- rprojroot::find_rstudio_root_file
 
 
-WaldronModel <- readRDS(P("outputs/WaldronModel5.RDS"))
+#WaldronModel <- readRDS(P("outputs/WaldronModel5.RDS"))
 RishmanModel <- readRDS(P("outputs/RishmanModel2.RDS"))
-WiseModel <- readRDS(P("outputs/EmilyModel.RDS"))
+Mlr1 <- readRDS(P("outputs/mlr1.RDS"))
 library(dplyr)
 #read in original data
 FullData <- read.csv(P("outputs/FinancialNeedsDataFromRishman.csv"), stringsAsFactors = FALSE) 
 
 #create subdata.frame with only attributes used
 
-detach("package:plyr", unload=TRUE)
+#detach("package:plyr", unload=TRUE)
 #Can't use select function if MASS is required.
 subdata <- FullData %>% 
   dplyr::select(countries,birdspeciesthreatened,
@@ -25,7 +25,7 @@ subdata <- FullData %>%
          CO2_Ems,
          mammalspeciesthreatened,
          Price_Index_yr2011,
-         terrestrialandmarineprotectedare,
+         terrestrialprotectedareasoftotal,
          lnGDP,
          ln_CO2ems,
          ln_agland,
@@ -34,7 +34,7 @@ subdata <- FullData %>%
          constant,
          AvgCO2ReductionPercent,
          new_domexp,
-         ln_newdomexp) %>% 
+         ln_newdomexp, AvgAgGrowth) %>% 
   arrange(countrycode)
 
 
@@ -80,9 +80,9 @@ BAUData <- Mergedata %>%
          average_population_density,
          mammalspeciesthreatened,
          Price_Index_yr2011,
-         terrestrialandmarineprotectedare,
+         terrestrialprotectedareasoftotal,
          ln_popdnsty,constant,
-         AvgCO2ReductionPercent, new_domexp, ln_newdomexp)
+         AvgCO2ReductionPercent, new_domexp, ln_newdomexp, AvgAgGrowth)
  
 BAUData<-BAUData %>% 
    mutate(GDP=ifelse(is.na(BAUData$GDP),exp(subdata$lnGDP),BAUData$GDP)) %>% 
@@ -235,18 +235,18 @@ write.csv(BAUData, P('outputs/BAUdata.csv'))
  #should I find the 2030 levels of population density, too?
  
  #Waldron Model
- BAUData$ln_waldronexp <-
-   WaldronModel$coefficients[[1]]*BAUData$constant+
-   WaldronModel$coefficients[[2]]*BAUData$birdspeciesthreatened+
-   WaldronModel$coefficients[[3]]*BAUData$mammalspeciesthreatened+
-   WaldronModel$coefficients[[4]]*BAUData$ln_landarea+
-   WaldronModel$coefficients[[5]]*BAUData$Price_Index_yr2011+
-   WaldronModel$coefficients[[6]]*BAUData$terrestrialandmarineprotectedare+
-   WaldronModel$coefficients[[7]]*BAUData$futureGDP_sq+
-   WaldronModel$coefficients[[8]]*BAUData$Gov
-BAUData$ExpWaldron = exp(BAUData$ln_waldronexp) 
-#total sum of expenditures
-WaldronSum <- sum(BAUData$ExpWaldron, na.rm = TRUE)/1E9 #120.62 bil
+#  BAUData$ln_waldronexp <-
+#    WaldronModel$coefficients[[1]]*BAUData$constant+
+#    WaldronModel$coefficients[[2]]*BAUData$birdspeciesthreatened+
+#    WaldronModel$coefficients[[3]]*BAUData$mammalspeciesthreatened+
+#    WaldronModel$coefficients[[4]]*BAUData$ln_landarea+
+#    WaldronModel$coefficients[[5]]*BAUData$Price_Index_yr2011+
+#    WaldronModel$coefficients[[6]]*BAUData$terrestrialandmarineprotectedare+
+#    WaldronModel$coefficients[[7]]*BAUData$futureGDP_sq+
+#    WaldronModel$coefficients[[8]]*BAUData$Gov
+# BAUData$ExpWaldron = exp(BAUData$ln_waldronexp) 
+# #total sum of expenditures
+# WaldronSum <- sum(BAUData$ExpWaldron, na.rm = TRUE)/1E9 #120.62 bil
 
 #Rishman Model
 
@@ -263,21 +263,24 @@ BAUData$ExpRishman = exp(BAUData$ln_rishman)
 #total sum of expenditures
 RishmanSum <- sum(BAUData$ExpRishman, na.rm = TRUE)/1E9 #125.56 bil
 
-#Wise model
+#mlr1 model
 
-BAUData$ln_wise <-
-  WiseModel$coefficients[[1]]*BAUData$constant+
-  WiseModel$coefficients[[2]]*BAUData$ln_futureGDP+
-  WiseModel$coefficients[[3]]*BAUData$futureGDP_sq+
-  WiseModel$coefficients[[4]]*BAUData$Gov+
-  WiseModel$coefficients[[5]]*BAUData$AvgCO2ReductionPercent+
-  WiseModel$coefficients[[6]]*BAUData$futureagland+
-  WiseModel$coefficients[[7]]*BAUData$birdspeciesthreatened +
-  WiseModel$coefficients[[8]]*BAUData$average_population_density
-BAUData$ExpWise <- exp(BAUData$ln_wise)
+ln_emexp <-
+  Mlr1$coefficients[[1]]*BAUData$constant+
+  Mlr1$coefficients[[2]]*BAUData$ln_futureGDP+
+  Mlr1$coefficients[[3]]*BAUData$futureGDP_sq+
+  Mlr1$coefficients[[4]]*BAUData$Gov+
+  Mlr1$coefficients[[5]]*BAUData$AvgCO2ReductionPercent+
+  Mlr1$coefficients[[6]]*BAUData$futureagland+
+  Mlr1$coefficients[[7]]*BAUData$birdspeciesthreatened+
+  Mlr1$coefficients[[8]]*BAUData$average_population_density+
+  Mlr1$coefficients[[9]]*BAUData$AvgAgGrowth+
+  Mlr1$coefficients[[10]]*BAUData$terrestrialprotectedareasoftotal+
+  Mlr1$coefficients[[11]]*BAUData$ln_landarea
+BAUData$mlr1Expenditures <- exp(ln_emexp)
 #total sum of expenditures
 
-WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9 #429.82bil
+mlr1Sum <- sum(BAUData$mlr1Expenditures, na.rm = TRUE)/1E9 #570.865
 
 
 #fill in extrapolated dom exp where there isn't reported data - shouldnt do this for future data?
@@ -293,16 +296,21 @@ WiseSum <- sum(BAUData$ExpWise, na.rm = TRUE)/1E9 #429.82bil
 
 #Now find needs
 
-#Anthony Model
-WaldronNeeds<-readRDS("outputs/AnthonyNeeds.RDS")
-#manually extrapolate needs
-ln_needs_waldron <-
-  WaldronNeeds$coefficients[[1]]*BAUData$constant+
-  WaldronNeeds$coefficients[[2]]*BAUData$ln_waldronexp
-BAUData$WaldronNeeds <- exp(ln_needs_waldron)
-WaldronNeedsSum <- sum(BAUData$WaldronNeeds, na.rm = TRUE)/1E9 #156.39
+outputData <- left_join(FullData, BAUData, by = "countries")
+write.csv(outputData, "outputs/comparison.csv")
+
+
+# #Anthony Model
+# WaldronNeeds<-readRDS("outputs/AnthonyNeeds.RDS")
+# #manually extrapolate needs
+# ln_needs_waldron <-
+#   WaldronNeeds$coefficients[[1]]*BAUData$constant+
+#   WaldronNeeds$coefficients[[2]]*BAUData$ln_waldronexp
+# BAUData$WaldronNeeds <- exp(ln_needs_waldron)
+# WaldronNeedsSum <- sum(BAUData$WaldronNeeds, na.rm = TRUE)/1E9 #156.39
 
 BAUData$oilrentsofgdp <- FullData$oilrentsofgdp
+BAUData$terrestrialandmarineprotectedare <- FullData$terrestrialandmarineprotectedare
 #Rishman Model
 
 RishmanNeeds <- readRDS("outputs/RishmanNeeds.RDS")
@@ -318,13 +326,14 @@ SumRishmanNeeds <- sum(BAUData$RishmanNeeds, na.rm = TRUE)/1E9 #182.7
 
 #Wise Model
 
-WiseNeeds <- readRDS("outputs/EmilyNeeds.RDS")
+mlr1Needs <- readRDS("outputs/mlr1Needs.RDS")
 
-ln_needs_wise <-
-  WiseNeeds$coefficients[[1]]*BAUData$constant+
-  WiseNeeds$coefficients[[2]]*BAUData$ln_wise
-BAUData$WiseNeeds <- exp(ln_needs_wise)
-SumWiseNeeds <- sum(BAUData$WiseNeeds, na.rm = TRUE)/1E9 #377.53
+ln_needs_mlr1 <-
+  mlr1Needs$coefficients[[1]]*BAUData$constant+
+  mlr1Needs$coefficients[[2]]*ln_emexp
+BAUData$mlr1Needs <- exp(ln_needs_mlr1)
+sum(BAUData$mlr1Needs, na.rm = TRUE)/1E9 #726.1261
+
 
 BAUData<-BAUData %>% 
   dplyr::arrange(countries)
