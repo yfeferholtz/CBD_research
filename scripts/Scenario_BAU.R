@@ -221,6 +221,8 @@ co2.ppp.future.levels <- left_join(co2.ppp.gr.rate, co2.emissions.levels.ppp, by
 
 #merge with business as usual df
 BAUData <- left_join(BAUData, co2.ppp.future.levels, by = "countrycode")
+
+
  
 BAUData <- BAUData %>%  
    mutate(ln_futureGDP = log(`2030GDP`)) %>% 
@@ -228,8 +230,9 @@ BAUData <- BAUData %>%
    mutate(ln_futureco2ppp = log(futureco2levelppp)) %>% 
    mutate(futureGDP_sq = ln_futureGDP^2)
 
-write.csv(BAUData, P('outputs/BAUdata.csv')) 
- 
+#make US GDP growth 0- 
+BAUData$ln_futureGDP[203] <- FullData$lnGDP[203]
+BAUData$futureGDP_sq[203] <- FullData$GDP_sq[203]
 #find extrapolated expenditures using the 3 models. 
  
  #should I find the 2030 levels of population density, too?
@@ -264,6 +267,8 @@ BAUData$ExpRishman = exp(BAUData$ln_rishman)
 RishmanSum <- sum(BAUData$ExpRishman, na.rm = TRUE)/1E9 #125.56 bil
 
 #mlr1 model
+
+
 
 ln_emexp <-
   Mlr1$coefficients[[1]]*BAUData$constant+

@@ -10,36 +10,47 @@ rm(list=ls())
 library(devtools)
 P <- rprojroot::find_rstudio_root_file
 
-WaldronModel <- readRDS(P("outputs/WaldronModel5.RDS"))
+#WaldronModel <- readRDS(P("outputs/WaldronModel5.RDS"))
 RishmanModel <- readRDS(P("outputs/RishmanModel2.RDS"))
-WiseModel <- readRDS(P("outputs/EmilyModel.RDS"))
+Mlr1 <- readRDS(P("outputs/mlr1.RDS"))
 
 #read data 
-BAUData<- read.csv(P("outputs/BAUdata.csv"))
+BAUData<- read.csv(P("data/SPdata.csv"))
+GDPdata <- read.csv(P('data/scenario_data.csv')) %>% 
+  arrange(countries)
 
 #Create GCData from BAU
 library(dplyr)
 GCData <- BAUData %>%
   mutate(futureCO2_EMS=co2ppp*.7)%>%
   mutate(futureagland=aglandpercent*.7) %>%
-  mutate(futureGDP_sq=log(GDP)^2)%>%
-  mutate(ln_futureGDP=log(GDP)) %>% 
-  mutate(GCco2reduction = .3)
+  mutate(GDP = GDPdata$GDP) %>% 
+  mutate(GSGDPgrowth=GDPdata$AverageGDPrate/2)%>%
+  mutate(GSGDPgrowth = GSGDPgrowth/100) %>% 
+  mutate(GDPmultiplier = 1+GSGDPgrowth) %>% 
+  mutate(GSgdp = GDP*(GDPmultiplier^(12)))
+GCData$GSgdp[203] = GCData$GDP[203]
 
-#Extrapolate for Waldron
-ln_waldronexp <-
-  WaldronModel$coefficients[[1]]*GCData$constant+
-  WaldronModel$coefficients[[2]]*GCData$birdspeciesthreatened+
-  WaldronModel$coefficients[[3]]*GCData$mammalspeciesthreatened+
-  WaldronModel$coefficients[[4]]*GCData$ln_landarea+
-  WaldronModel$coefficients[[5]]*GCData$Price_Index_yr2011+
-  WaldronModel$coefficients[[6]]*GCData$terrestrialandmarineprotectedare+
-  WaldronModel$coefficients[[7]]*GCData$futureGDP_sq+
-  WaldronModel$coefficients[[8]]*GCData$Gov
-GCData$ExpWaldronGC = exp(ln_waldronexp) 
+GCData<-GCData%>% 
+  mutate(ln_GSGDP=log(GSgdp)) %>% 
+  mutate(GSgdp_sq = ln_GSGDP^2) %>% 
+  mutate(GCco2reduction = .3) %>% 
+  mutate(GCAgGrowth = -.3)
+
+# #Extrapolate for Waldron
+# ln_waldronexp <-
+#   WaldronModel$coefficients[[1]]*GCData$constant+
+#   WaldronModel$coefficients[[2]]*GCData$birdspeciesthreatened+
+#   WaldronModel$coefficients[[3]]*GCData$mammalspeciesthreatened+
+#   WaldronModel$coefficients[[4]]*GCData$ln_landarea+
+#   WaldronModel$coefficients[[5]]*GCData$Price_Index_yr2011+
+#   WaldronModel$coefficients[[6]]*GCData$terrestrialandmarineprotectedare+
+#   WaldronModel$coefficients[[7]]*GCData$futureGDP_sq+
+#   WaldronModel$coefficients[[8]]*GCData$Gov
+# GCData$ExpWaldronGC = exp(ln_waldronexp) 
 
 #total sum
-WaldronSum <- sum(GCData$ExpWaldron, na.rm = TRUE)/1E9
+#WaldronSum <- sum(GCData$ExpWaldron, na.rm = TRUE)/1E9
 #107.899 Billion, quite a bit less than BAU
 
 #Rishman Model
@@ -51,45 +62,50 @@ ln_rishman <-
   RishmanModel$coefficients[[4]]*GCData$Gov+
   RishmanModel$coefficients[[5]]*GCData$average_population_density+
   RishmanModel$coefficients[[6]]*GCData$futureagland+ 
-  RishmanModel$coefficients[[7]]*GCData$futureGDP_sq+
+  RishmanModel$coefficients[[7]]*GCData$GSgdp_sq+
   RishmanModel$coefficients[[8]]*GCData$futureCO2_EMS
 GCData$ExpRishmanGC = exp(ln_rishman)  
 #total sum of expenditures
 RishmanSum <- sum(GCData$ExpRishman, na.rm = TRUE)/1E9
-#97 Billion, quite a bit lower than BAU
+#125.56 Billion, quite a bit lower than BAU
 
 #Wise model
 
-ln_wise <-
-  WiseModel$coefficients[[1]]*GCData$constant+
-  WiseModel$coefficients[[2]]*GCData$ln_futureGDP+
-  WiseModel$coefficients[[3]]*GCData$futureGDP_sq+
-  WiseModel$coefficients[[4]]*GCData$Gov+
-  WiseModel$coefficients[[5]]*GCData$GCco2reduction+
-  WiseModel$coefficients[[6]]*GCData$futureagland+
-  WiseModel$coefficients[[7]]*GCData$birdspeciesthreatened +
-  WiseModel$coefficients[[8]]*GCData$average_population_density
-GCData$ExpWiseGC <- exp(ln_wise)
-WiseSum <- sum(GCData$ExpWise, na.rm = TRUE)/1E9
-#172.75 Billion, quite a bit less than BAU
+ln_mlr1 <-
+  Mlr1$coefficients[[1]]*GCData$constant+
+  Mlr1$coefficients[[2]]*GCData$ln_GSGDP+
+  Mlr1$coefficients[[3]]*GCData$GSgdp_sq+
+  Mlr1$coefficients[[4]]*GCData$Gov+
+  Mlr1$coefficients[[5]]*GCData$GCco2reduction+
+  Mlr1$coefficients[[6]]*GCData$futureagland+
+  Mlr1$coefficients[[7]]*GCData$birdspeciesthreatened+
+  Mlr1$coefficients[[8]]*GCData$average_population_density+
+  Mlr1$coefficients[[9]]*GCData$GCAgGrowth+
+  Mlr1$coefficients[[10]]*GCData$terrestrialprotectedareasoftotal+
+  Mlr1$coefficients[[11]]*GCData$ln_landarea
+GCData$Expmlr1GC <- exp(ln_mlr1)
+mlr1Sum <- sum(GCData$Expmlr1GC, na.rm = TRUE)/1E9
+
+#314.277 Billion, quite a bit less than BAU
 
 
 
 
 #Need to apply needs
-WiseNeeds <- readRDS("outputs/EmilyNeeds.RDS")
+mlr1Needs <- readRDS("outputs/mlr1Needs.RDS")
 RishmanNeeds <- readRDS("outputs/RishmanNeeds.RDS")
-WaldronNeeds<-readRDS("outputs/AnthonyNeeds.RDS")
+#WaldronNeeds<-readRDS("outputs/AnthonyNeeds.RDS")
 
 
 #Waldron Needs
-ln_needs_waldron <-
-  WaldronNeeds$coefficients[[1]]*GCData$constant+
-  WaldronNeeds$coefficients[[2]]*ln_waldronexp
-GCData$WaldronNeedsGC <- exp(ln_needs_waldron)
-WaldronNeedsSum <- sum(GCData$WaldronNeedsGC, na.rm = TRUE)/1E9 #140.4no change
+# ln_needs_waldron <-
+#   WaldronNeeds$coefficients[[1]]*GCData$constant+
+#   WaldronNeeds$coefficients[[2]]*ln_waldronexp
+# GCData$WaldronNeedsGC <- exp(ln_needs_waldron)
+# WaldronNeedsSum <- sum(GCData$WaldronNeedsGC, na.rm = TRUE)/1E9 #140.4no change
 
 #Rishman Needs
+
 
 ln_needs_rishman <- 
   RishmanNeeds$coefficients[[1]]*GCData$constant+
@@ -102,11 +118,12 @@ SumRishmanNeeds <- sum(GCData$RishmanNeedsGC, na.rm = TRUE)/1E9 #140.2
 
 # Wise Needs
 
-ln_needs_wise <-
-  WiseNeeds$coefficients[[1]]*GCData$constant+
-  WiseNeeds$coefficients[[2]]*ln_wise
-GCData$WiseNeedsGC <- exp(ln_needs_wise)
-SumWiseNeeds <- sum(GCData$WiseNeedsGC, na.rm = TRUE)/1E9 #226.14
+ln_needs_mlr1 <-
+  mlr1Needs$coefficients[[1]]*GCData$constant+
+  mlr1Needs$coefficients[[2]]*ln_mlr1
+GCData$mlr1NeedsGC <- exp(ln_needs_mlr1)
+Summlr1Needs <- sum(GCData$mlr1NeedsGC, na.rm = TRUE)/1E9 #115.39.14
+
 
 
 GCData <- GCData %>%

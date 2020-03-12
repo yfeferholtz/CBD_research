@@ -602,7 +602,9 @@ FinNeeds<-FinNeeds %>%
   mutate(aglandtimesgrowth = AvgAgGrowth*agriculturallandoflandarea) %>% 
   mutate(birdspeciesperlandarea = birdspeciesthreatened/landareasqkm)
 
-#now run model with c02 reduction percent instead of levels
+
+#drop US from calculations
+altered_dataE <- FinNeeds[-c(203, 36),]
 
 mlr1 <- lm(ln_newdomexp ~ lnGDP+
                  GDP_sq+
