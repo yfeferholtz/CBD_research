@@ -98,7 +98,7 @@ ln_needs_rishman <-
   RishmanNeeds$coefficients[[4]]*SPdata$oilrentsofgdp+
   RishmanNeeds$coefficients[[5]]*SPdata$terrestrialandmarineprotectedare
 SPdata$RishmanNeedsSP <- exp(ln_needs_rishman)
-SumRishmanNeeds <- sum(SPdata$RishmanNeedsSP, na.rm = TRUE)/1E9 #184.8
+SumRishmanNeeds <- sum(SPdata$RishmanNeedsSP, na.rm = TRUE)/1E9 #1210.27
 
 # Wise Needs
 
