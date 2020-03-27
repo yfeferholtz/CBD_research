@@ -18,7 +18,17 @@ library(dplyr)
 #read data
 SPdata<- read.csv(P("outputs/BAUdata.csv"), stringsAsFactors = FALSE) %>% 
   mutate(SPCO2growth = 0) %>% 
-  mutate(SPAgGrowth = 0)
+  mutate(SPAgGrowth = -.1)
+
+
+GDPdata <- read.csv(P('data/scenario_data.csv')) %>% 
+  arrange(countries)
+
+#Create GCData from BAU
+library(dplyr)
+SPdata <- SPdata %>%
+  mutate(futureCO2_EMS=co2ppp*.7)%>%
+  mutate(SPagland=aglandpercent*.9)
 
 
 # #Extrapolate for Waldron
@@ -44,7 +54,7 @@ ln_rishman <-
   RishmanModel$coefficients[[3]]*SPdata$ln_landarea+
   RishmanModel$coefficients[[4]]*SPdata$Gov+
   RishmanModel$coefficients[[5]]*SPdata$average_population_density+
-  RishmanModel$coefficients[[6]]*SPdata$aglandpercent+ #only change
+  RishmanModel$coefficients[[6]]*SPdata$SPagland+ #only change
   RishmanModel$coefficients[[7]]*SPdata$futureGDP_sq+
   RishmanModel$coefficients[[8]]*SPdata$co2ppp
 SPdata$ExpRishmanSP = exp(ln_rishman)
@@ -61,7 +71,7 @@ ln_mlr1 <-
   Mlr1$coefficients[[3]]*SPdata$futureGDP_sq+
   Mlr1$coefficients[[4]]*SPdata$Gov+
   Mlr1$coefficients[[5]]*SPdata$SPCO2growth+
-  Mlr1$coefficients[[6]]*SPdata$aglandpercent+
+  Mlr1$coefficients[[6]]*SPdata$futureagland+
   Mlr1$coefficients[[7]]*SPdata$birdspeciesthreatened+
   Mlr1$coefficients[[8]]*SPdata$average_population_density+
   Mlr1$coefficients[[9]]*SPdata$SPAgGrowth+
@@ -98,7 +108,7 @@ ln_needs_rishman <-
   RishmanNeeds$coefficients[[4]]*SPdata$oilrentsofgdp+
   RishmanNeeds$coefficients[[5]]*SPdata$terrestrialandmarineprotectedare
 SPdata$RishmanNeedsSP <- exp(ln_needs_rishman)
-SumRishmanNeeds <- sum(SPdata$RishmanNeedsSP, na.rm = TRUE)/1E9 #1210.27
+VISumRishmanNeeds <- sum(SPdata$RishmanNeedsSP, na.rm = TRUE)/1E9 #1210.27
 
 # Wise Needs
 
